@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import binance from '../services/adapters/binance.js';
 import kraken from '../services/adapters/kraken.js';
 import coinbase from '../services/adapters/coinbase.js';
-import { pair, product, level, bookMessage } from './fixtures.js';
+import { pair, ticker, product, level, bookMessage } from './fixtures.js';
 
 test('Binance descubre solo pares activos y habilitados para spot', async () => {
     const result = await binance.discover({ pairsUrl: 'metadata' }, async url => {
@@ -18,7 +18,7 @@ test('Binance suscribe bookTicker, normaliza mensajes directos y combinados y pr
     assert.deepEqual(binance.subscriptions([pair()]), [{ method: 'SUBSCRIBE', params: ['ethusdt@bookTicker'], id: 1 }]);
     const parse = binance.createParser([pair()]);
     const message = { s: 'ETHUSDT', b: '99', B: '0.5', a: '100', A: '0.75' };
-    const expected = [{ symbol: 'ETHUSDT', baseAsset: 'ETH', bidPrice: 99, bidQty: 0.5, askPrice: 100, askQty: 0.75 }];
+    const expected = [ticker({ bidQty: 0.5, askQty: 0.75 })];
     assert.deepEqual(parse(message), expected);
     assert.deepEqual(parse({ data: message }), expected);
     assert.deepEqual(parse({ result: null, id: 1 }), []);

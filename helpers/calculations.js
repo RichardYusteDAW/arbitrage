@@ -1,8 +1,5 @@
-/**
- * @param {number|string} buyPrice
- * @param {number|string} sellPrice
- * @returns {number|null} Porcentaje de rentabilidad bruta.
- */
+import { Opportunity } from '../models/opportunity.js';
+
 const calculateProfitability = (buyPrice, sellPrice) => {
     buyPrice = Number(buyPrice);
     sellPrice = Number(sellPrice);
@@ -16,13 +13,6 @@ const calculateProfitability = (buyPrice, sellPrice) => {
     return null;
 };
 
-/**
- * @param {string|undefined} baseAsset
- * @param {number|string|null} askQty
- * @param {number|string|null} bidQty
- * @param {Map<string, import('../models/ticker.js').TickerInput>} market
- * @returns {number|null}
- */
 const calculateMaxVolume = (baseAsset, askQty, bidQty, market) => {
     const maxQty = Math.min(
         Number(askQty),
@@ -40,21 +30,38 @@ const calculateMaxVolume = (baseAsset, askQty, bidQty, market) => {
     }
 
     return null;
-}
+};
 
-/**
- * @param {import('../models/ticker.js').ExchangesData} exchangesData
- * @returns {import('../models/opportunity.js').Opportunity[]}
- */
-const calculateOpportunities = (exchangesData) => {
-    const exchangesMap = new Map(
-        Object.entries(exchangesData).map(([exchangeName, tickersData]) => [
-            exchangeName,
-            new Map(tickersData.map(tickerData => [tickerData.symbol, tickerData]))
-        ])
+const createExchangeMaps = exchangesData => new Map(
+    Object.entries(exchangesData).map(([exchangeName, tickersData]) => [
+        exchangeName,
+        new Map(tickersData.map(tickerData => [tickerData.symbol, tickerData]))
+    ])
+);
+
+const calculateOpportunity = (buyExchangeName, sellExchangeName, buyTickerData, sellTickerData, buyTickers) => {
+    const profitability = calculateProfitability(buyTickerData.askPrice, sellTickerData.bidPrice);
+    if (!(profitability > 0)) return null;
+
+    const maxVolumeUSD = calculateMaxVolume(
+        buyTickerData.baseAsset ?? sellTickerData.baseAsset,
+        buyTickerData.askQty,
+        sellTickerData.bidQty,
+        buyTickers
     );
+    return new Opportunity({
+        symbol: buyTickerData.symbol,
+        buy: buyExchangeName,
+        sell: sellExchangeName,
+        profitability,
+        maxVolumeUSD,
+        profitUSD: maxVolumeUSD === null ? null : maxVolumeUSD * profitability / 100
+    });
+};
 
-    /** @type {import('../models/opportunity.js').Opportunity[]} */
+const calculateOpportunities = exchangesData => {
+    const exchangesMap = createExchangeMaps(exchangesData);
+
     const opportunities = [];
 
     for (const [buyExchangeName, buyTickers] of exchangesMap) {
@@ -62,26 +69,15 @@ const calculateOpportunities = (exchangesData) => {
             if (buyExchangeName === sellExchangeName) continue;
 
             for (const [buyTickerSymbol, buyTickerData] of buyTickers) {
-                
+
                 if (!buyTickerSymbol) continue;
 
                 const sellTickerData = sellTickers.get(buyTickerSymbol);
                 if (!sellTickerData) continue;
 
-                const profitability = calculateProfitability(buyTickerData.askPrice, sellTickerData.bidPrice);
-                if (profitability > 0) {
-                    const maxVolumeUSD = calculateMaxVolume(buyTickerData.baseAsset ?? sellTickerData.baseAsset, buyTickerData.askQty, sellTickerData.bidQty, buyTickers);
-                    const opportunity = {
-                        symbol: buyTickerSymbol,
-                        buy: buyExchangeName,
-                        sell: sellExchangeName,
-                        profitability,
-                        maxVolumeUSD,
-                        profitUSD: maxVolumeUSD === null ? null : maxVolumeUSD * profitability / 100
-                    };
-
-                    opportunities.push(opportunity);
-                }
+                const opportunity = calculateOpportunity(buyExchangeName, sellExchangeName, buyTickerData, sellTickerData, buyTickers);
+                if (!opportunity) continue;
+                opportunities.push(opportunity);
             }
         }
     }

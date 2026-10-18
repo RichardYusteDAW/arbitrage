@@ -1,17 +1,29 @@
-/** @type {import('../../models/exchange.js').ExchangeAdapter} */
+import { ExchangePair } from '../../models/exchange.js';
+import { TickerData } from '../../models/ticker.js';
+import { OrderBook } from '../orderBook.js';
+
 const coinbaseAdapter = {
     async discover(config, request) {
         const products = new Map();
         const cursors = new Set();
         let url = config.pairsUrl;
+
         while (url) {
             const data = await request(url);
-            for (const product of data.products) products.set(product.product_id, product);
+
+            for (const product of data.products)
+                products.set(product.product_id, product);
+
             url = null;
+
             if (data.pagination?.has_next) {
                 const cursor = data.pagination.next_cursor;
-                if (!cursor || cursors.has(cursor)) throw new Error('Invalid pagination cursor');
+
+                if (!cursor || cursors.has(cursor))
+                    throw new Error('Invalid pagination cursor');
+
                 cursors.add(cursor);
+
                 const nextUrl = new URL(config.pairsUrl);
                 nextUrl.searchParams.set('cursor', cursor);
                 url = nextUrl.toString();
@@ -21,11 +33,16 @@ const coinbaseAdapter = {
         // Public WS aliases most -USDC products to -USD; subscribe to the actual book once.
         const allProducts = [...products.values()];
         return allProducts
-            .filter(product => product.product_type === 'SPOT' && product.status === 'online'
-                && !product.trading_disabled && !product.is_disabled && !product.view_only
-                && !product.cancel_only && !product.limit_only && !product.post_only)
+            .filter(product => product.product_type === 'SPOT'
+                && product.status === 'online'
+                && !product.trading_disabled
+                && !product.is_disabled
+                && !product.view_only
+                && !product.cancel_only
+                && !product.limit_only
+                && !product.post_only)
             .filter(product => !product.alias || product.alias === product.product_id)
-            .map(product => ({
+            .map(product => new ExchangePair({
                 id: product.product_id,
                 symbol: product.base_currency_id + product.quote_currency_id,
                 baseAsset: product.base_currency_id
@@ -39,41 +56,40 @@ const coinbaseAdapter = {
     },
     createParser(pairs) {
         const pairsMap = new Map(pairs.map(pair => [pair.id, pair]));
-        /** @type {Map<string, { bids: Map<number, number>, asks: Map<number, number> }>} */
         const books = new Map();
         let lastSequence;
         return message => {
-            if (message.type === 'error') throw new Error(message.message ?? 'Subscription failed');
+            if (message.type === 'error')
+                throw new Error(message.message ?? 'Subscription failed');
+
             // The connection sequence also counts heartbeats and subscription messages.
             if (Number.isInteger(message.sequence_num)) {
                 if (lastSequence !== undefined && message.sequence_num !== lastSequence + 1)
                     throw new Error('Order book sequence gap; new snapshot required');
                 lastSequence = message.sequence_num;
             }
-            if (message.channel !== 'l2_data') return [];
-            /** @type {import('../../models/ticker.js').TickerData[]} */
+
+            if (message.channel !== 'l2_data')
+                return [];
+
             const updates = [];
+
             for (const event of message.events) {
                 const pair = pairsMap.get(event.product_id);
-                if (!pair) continue;
-                if (event.type === 'snapshot') books.set(event.product_id, { bids: new Map(), asks: new Map() });
-                const book = books.get(event.product_id);
-                if (!book) throw new Error('Order book update received before snapshot');
-                for (const update of event.updates) {
-                    const side = update.side === 'bid' ? book.bids : book.asks;
-                    const price = Number(update.price_level);
-                    const quantity = Number(update.new_quantity);
-                    if (quantity === 0) side.delete(price);
-                    else side.set(price, quantity);
-                }
 
-                let bidPrice = 0;
-                let askPrice = Infinity;
-                for (const price of book.bids.keys()) if (price > bidPrice) bidPrice = price;
-                for (const price of book.asks.keys()) if (price < askPrice) askPrice = price;
-                updates.push({ symbol: pair.symbol, baseAsset: pair.baseAsset,
-                    bidPrice, bidQty: book.bids.get(bidPrice) ?? 0,
-                    askPrice: Number.isFinite(askPrice) ? askPrice : 0, askQty: book.asks.get(askPrice) ?? 0 });
+                if (!pair)
+                    continue;
+
+                if (event.type === 'snapshot')
+                    books.set(event.product_id, new OrderBook());
+
+                const book = books.get(event.product_id);
+
+                if (!book)
+                    throw new Error('Order book update received before snapshot');
+
+                book.apply(event.updates);
+                updates.push(new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset, ...book.getBestPrices() }));
             }
             return updates;
         };

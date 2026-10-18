@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateOpportunities } from '../helpers/calculations.js';
 import { ticker } from './fixtures.js';
+import { Opportunity } from '../models/opportunity.js';
 
 const inputs = (buy = {}, sell = {}, conversions = [ticker()]) => ({
     buyer: [ticker({ symbol: 'ETHBTC', askPrice: 10, bidPrice: 9, ...buy }), ...conversions],
@@ -10,7 +11,7 @@ const inputs = (buy = {}, sell = {}, conversions = [ticker()]) => ({
 
 test('calcula rentabilidad, volumen y beneficio sin redondear los datos internos', () => {
     const [result] = calculateOpportunities(inputs({ askPrice: '10', askQty: '2' }, { bidQty: '0.5' }));
-    assert.deepEqual(result, { symbol: 'ETHBTC', buy: 'buyer', sell: 'seller', profitability: 10, maxVolumeUSD: 50, profitUSD: 5 });
+    assert.deepEqual(result, new Opportunity({ symbol: 'ETHBTC', buy: 'buyer', sell: 'seller', profitability: 10, maxVolumeUSD: 50, profitUSD: 5 }));
 });
 
 test('comprueba ambos sentidos y usa el precio USD del exchange de compra', () => {
@@ -82,5 +83,5 @@ test('no modifica el objeto ni los arrays de entrada', () => {
     const data = inputs();
     const before = structuredClone(data);
     calculateOpportunities(data);
-    assert.deepEqual(data, before);
+    assert.deepEqual(structuredClone(data), before);
 });

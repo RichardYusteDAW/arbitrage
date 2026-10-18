@@ -18,18 +18,35 @@ La terminal muestra el estado de cada exchange desde el arranque y refresca la t
 - Las conexiones se reparten en grupos según `maxPairsPerConnection`. Se reconectan automáticamente con una espera creciente de hasta 30 segundos.
 - Al desconectarse una conexión se retiran sus cotizaciones. También se excluyen cotizaciones sin actualizaciones durante 30 segundos (`quoteMaxAge` en el servicio).
 
-La configuración está en `data/exchanges.js`; los adaptadores, en `services/adapters/`; la gestión de conexiones, en `services/marketData.js`. `app.js` obtiene los últimos datos, calcula oportunidades y actualiza la terminal.
+La configuración de los exchanges está en `data/exchanges.js` y todos los tiempos, en milisegundos, en `data/settings.js`.
+
+## Organización
+
+- `app.js`: arranque, refresco periódico y parada.
+- `presentation/console.js`: formato y presentación de resultados y estados.
+- `helpers/calculations.js`: creación de mapas y cálculo de oportunidades.
+- `services/marketData.js`: coordinación de descubrimiento, conexiones y datos.
+- `services/webSocketConnection.js`: suscripciones, heartbeat, timeout y reconexión de una conexión.
+- `services/requestClient.js`: peticiones REST, timeout y cancelación.
+- `services/pairSelection.js`: selección de pares compartidos y conversiones.
+- `services/quoteStore.js`: almacenamiento y caducidad de cotizaciones.
+- `services/orderBook.js`: aplicación de actualizaciones y consulta del mejor bid/ask.
+- `services/adapters/`: interpretación de los mensajes de cada exchange.
 
 Las fórmulas de `helpers/calculations.js` no se han cambiado: rentabilidad bruta sin comisiones y conversión USDT primero, USDC después; sin ninguno se devuelve `null`. USDT y USDC se consideran equivalentes a USD. El emparejamiento sigue utilizando los símbolos normalizados, sin resolver identidades de tokens que comparten ticker.
 
-Los helpers REST anteriores se conservan, pero `app.js` ya no utiliza la carga REST de libros de Coinbase.
+Se han retirado los helpers REST antiguos: la normalización se realiza en los adaptadores, sin mantener dos implementaciones de cada exchange.
 
 ## Modelos compartidos
 
-`models/` define los contratos mediante JSDoc, sin clases ni cambios en los objetos en ejecución:
+Los módulos utilizan las mismas clases de `models/` para construir los datos:
 
-- `ticker.js`: cotizaciones normalizadas, cotizaciones recibidas con fecha y entradas REST admitidas por los cálculos.
-- `opportunity.js`: resultado de rentabilidad, volumen y beneficio.
-- `exchange.js`: configuración, pares y contrato de los adaptadores WebSocket.
+- `ticker.js`: `TickerData`; el servicio añade `receivedAt` al guardar una cotización.
+- `opportunity.js`: `Opportunity`, con rentabilidad, volumen y beneficio.
+- `exchange.js`: `ExchangeConfig` y `ExchangePair`, además del contrato JSDoc de los adaptadores.
 
-Los módulos referencian estos tipos con `import()` dentro de JSDoc. Son referencias para el editor; no añaden imports ni validaciones en ejecución.
+Los constructores unifican los campos. La conversión de los mensajes externos sigue en los adaptadores y las validaciones de cotizaciones, en el almacén. JSDoc documenta los tipos; las clases no incorporan validaciones nuevas.
+
+## Pruebas
+
+Todos los tests y sus fixtures están en `_test/`. Se ejecutan con `npm test`, sin conexiones a servicios externos. Cubren los cálculos, los adaptadores, los modelos, el libro de órdenes, las peticiones, las cotizaciones, las conexiones y el arranque y parada de la aplicación.

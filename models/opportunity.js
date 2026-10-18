@@ -1,12 +1,12 @@
-/**
- * Oportunidad calculada entre dos exchanges. Importes brutos, sin comisiones.
- * @typedef {Object} Opportunity
- * @property {string} symbol
- * @property {string} buy Nombre del exchange de compra.
- * @property {string} sell Nombre del exchange de venta.
- * @property {number} profitability Porcentaje, no fracción.
- * @property {number|null} maxVolumeUSD
- * @property {number|null} profitUSD
- */
+class Opportunity {
+    constructor({ symbol, buy, sell, profitability, maxVolumeUSD, profitUSD }) {
+        this.symbol = symbol;
+        this.buy = buy;
+        this.sell = sell;
+        this.profitability = profitability;
+        this.maxVolumeUSD = maxVolumeUSD;
+        this.profitUSD = profitUSD;
+    }
+}
 
-export {};
+export { Opportunity };

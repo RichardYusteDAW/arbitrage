@@ -1,8 +1,10 @@
 import { setImmediate } from 'node:timers/promises';
+import { ExchangePair } from '../models/exchange.js';
+import { TickerData } from '../models/ticker.js';
 
 export const flush = () => setImmediate();
-export const pair = (symbol = 'ETHUSDT', baseAsset = 'ETH', id = symbol) => ({ id, symbol, baseAsset });
-export const ticker = (changes = {}) => ({ symbol: 'ETHUSDT', baseAsset: 'ETH',
+export const pair = (symbol = 'ETHUSDT', baseAsset = 'ETH', id = symbol) => new ExchangePair({ id, symbol, baseAsset });
+export const ticker = (changes = {}) => new TickerData({ symbol: 'ETHUSDT', baseAsset: 'ETH',
     askPrice: 100, askQty: 2, bidPrice: 99, bidQty: 1, ...changes });
 export const product = (id = 'ETH-USDT', changes = {}) => ({ product_id: id,
     base_currency_id: id.split('-')[0], quote_currency_id: id.split('-')[1],
