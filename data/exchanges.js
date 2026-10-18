@@ -1,26 +1,26 @@
-import { getCoinbaseData, loadCoinbaseData } from '../coinbase.js';
-import { getBinanceData } from '../helpers/binance.js';
-import { getKrakenData } from '../helpers/kraken.js';
+import binanceAdapter from '../services/adapters/binance.js';
+import krakenAdapter from '../services/adapters/kraken.js';
+import coinbaseAdapter from '../services/adapters/coinbase.js';
 
+/** @type {import('../models/exchange.js').ExchangesConfig} */
 const EXCHANGES = {
   binance: {
-    url: 'https://api.binance.com/api/v3/ticker/bookTicker',
+    websocketUrl: 'wss://stream.binance.com:9443/ws',
     pairsUrl: 'https://api.binance.com/api/v3/exchangeInfo',
-    normalize: (data, pairs) => getBinanceData(data, pairs.symbols)
+    maxPairsPerConnection: 500,
+    adapter: binanceAdapter
   },
   coinbase: {
-    url: 'https://api.coinbase.com/api/v3/brokerage/market/products',
-    load: loadCoinbaseData,
-    normalize: getCoinbaseData
+    websocketUrl: 'wss://advanced-trade-ws.coinbase.com',
+    pairsUrl: 'https://api.coinbase.com/api/v3/brokerage/market/products',
+    maxPairsPerConnection: 25,
+    adapter: coinbaseAdapter
   },
   kraken: {
-    url: 'https://api.kraken.com/0/public/Ticker',
+    websocketUrl: 'wss://ws.kraken.com/v2',
     pairsUrl: 'https://api.kraken.com/0/public/AssetPairs',
-    validate: res => {
-      if (res.error?.length)
-        throw new Error(`kraken: ${res.error.join(', ')}`);
-    },
-    normalize: (data, pairs) => getKrakenData(pairs.result, data.result)
+    maxPairsPerConnection: 100,
+    adapter: krakenAdapter
   }
 };
 

@@ -1,3 +1,8 @@
+/**
+ * @param {Record<string, { status: string, wsname?: string }>} krakenPairs
+ * @param {Record<string, { b: string[], a: string[] }>} krakenResult
+ * @returns {import('../models/ticker.js').TickerData[]}
+ */
 const getKrakenData = (krakenPairs, krakenResult) => {
     const ALIASES = {
         XBT: 'BTC',

@@ -1,3 +1,8 @@
+/**
+ * @param {import('../models/ticker.js').TickerInput[]} tickers
+ * @param {{ symbol: string, status: string, baseAsset: string }[]} pairs
+ * @returns {import('../models/ticker.js').TickerInput[]}
+ */
 const getBinanceData = (tickers, pairs) => {
     const pairsMap = new Map(
         pairs

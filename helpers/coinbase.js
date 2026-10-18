@@ -9,6 +9,11 @@ const isTradableProduct = product =>
             !product.limit_only &&
             !product.post_only;
 
+/**
+ * @param {string} url
+ * @param {import('../models/exchange.js').JsonRequest} request
+ * @returns {Promise<Record<string, any>[]>}
+ */
 const loadCoinbaseData = async (url, request) => {
     const products = [];
     const cursors = new Set();
@@ -60,6 +65,10 @@ const loadCoinbaseData = async (url, request) => {
     return activeProducts;
 };
 
+/**
+ * @param {Record<string, any>[]} products Respuesta REST con los libros de órdenes incorporados.
+ * @returns {import('../models/ticker.js').TickerData[]}
+ */
 const getCoinbaseData = products => {
     return products
         .filter(isTradableProduct)

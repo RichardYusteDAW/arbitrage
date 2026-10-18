@@ -1,51 +1,36 @@
-import { calculateOpportunities } from "./helpers/calculations.js";
-import EXCHANGES from "./data/exchanges.js";
+import { calculateOpportunities } from './helpers/calculations.js';
+import EXCHANGES from './data/exchanges.js';
+import { createMarketDataService } from './services/marketData.js';
 
-const results = await Promise.all(
-  Object.entries(EXCHANGES).map(async ([exchangeName, exchangeConfig]) => {
+const marketData = createMarketDataService(EXCHANGES);
 
-    const request = async url => {
-      const response = await fetch(url);
+const render = () => {
+  const opportunities = calculateOpportunities(marketData.getData())
+    .sort((a, b) => b.profitability - a.profitability);
 
-      if (!response.ok) {
-        const error = new Error(`${exchangeName}: HTTP ${response.status}`);
-        error.status = response.status;
-        throw error;
-      }
+  if (process.stdout.isTTY) process.stdout.write('\x1b[H\x1b[2J');
+  console.log(`Arbitraje | ${new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' })} | refresco: 1 s`);
+  for (const [name, status] of Object.entries(marketData.getStatus())) {
+    console.log(`${name}: ${status.state} | conexiones ${status.connections}/${status.totalConnections} | pares con datos ${status.quotes}${status.error ? ` | ${status.error}` : ''}`);
+  }
+  console.log(`Oportunidades: ${opportunities.length} | rentabilidad bruta, sin comisiones | USDT/USDC = USD`);
+  const limit = process.stdout.isTTY ? Math.max(1, (process.stdout.rows ?? 30) - 12) : 20;
+  console.table(opportunities.slice(0, limit).map(opportunity => ({
+    symbol: opportunity.symbol,
+    buy: opportunity.buy,
+    sell: opportunity.sell,
+    profitability: opportunity.profitability.toFixed(4) + '%',
+    maxVolumeUSD: opportunity.maxVolumeUSD?.toFixed(2) ?? null,
+    profitUSD: opportunity.profitUSD?.toFixed(2) ?? null
+  })));
+};
 
-      const responseData = await response.json();
-      exchangeConfig.validate?.(responseData);
-      return responseData;
-    };
-
-    if (exchangeConfig.load) {
-      const responseData = await exchangeConfig.load(exchangeConfig.url, request);
-      return [exchangeName, exchangeConfig.normalize(responseData)];
-    }
-
-    const urls = [exchangeConfig.url];
-
-    if (exchangeConfig.pairsUrl)
-      urls.push(exchangeConfig.pairsUrl);
-
-    const responses = await Promise.all(urls.map(request));
-
-    return [exchangeName, exchangeConfig.normalize(...responses)];
-  })
-);
-
-const data = Object.fromEntries(results);
-const opportunities = calculateOpportunities(data);
-
-console.table(
-  opportunities
-    .sort((a, b) => b.profitability - a.profitability)
-    .map(opportunity => ({
-      symbol: opportunity.symbol,
-      buy: opportunity.buy,
-      sell: opportunity.sell,
-      profitability: opportunity.profitability.toFixed(4) + '%',
-      maxVolumeUSD: opportunity.maxVolumeUSD?.toFixed(2) ?? null,
-      profitUSD: opportunity.profitUSD?.toFixed(2) ?? null
-    }))
-);
+marketData.start();
+render();
+const renderTimer = setInterval(render, 1000);
+const stop = () => {
+  clearInterval(renderTimer);
+  marketData.stop();
+};
+process.once('SIGINT', stop);
+process.once('SIGTERM', stop);

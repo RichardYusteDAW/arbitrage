@@ -1,3 +1,8 @@
+/**
+ * @param {number|string} buyPrice
+ * @param {number|string} sellPrice
+ * @returns {number|null} Porcentaje de rentabilidad bruta.
+ */
 const calculateProfitability = (buyPrice, sellPrice) => {
     buyPrice = Number(buyPrice);
     sellPrice = Number(sellPrice);
@@ -11,6 +16,13 @@ const calculateProfitability = (buyPrice, sellPrice) => {
     return null;
 };
 
+/**
+ * @param {string|undefined} baseAsset
+ * @param {number|string|null} askQty
+ * @param {number|string|null} bidQty
+ * @param {Map<string, import('../models/ticker.js').TickerInput>} market
+ * @returns {number|null}
+ */
 const calculateMaxVolume = (baseAsset, askQty, bidQty, market) => {
     const maxQty = Math.min(
         Number(askQty),
@@ -30,18 +42,23 @@ const calculateMaxVolume = (baseAsset, askQty, bidQty, market) => {
     return null;
 }
 
+/**
+ * @param {import('../models/ticker.js').ExchangesData} exchangesData
+ * @returns {import('../models/opportunity.js').Opportunity[]}
+ */
 const calculateOpportunities = (exchangesData) => {
-    exchangesData = new Map(
+    const exchangesMap = new Map(
         Object.entries(exchangesData).map(([exchangeName, tickersData]) => [
             exchangeName,
             new Map(tickersData.map(tickerData => [tickerData.symbol, tickerData]))
         ])
     );
 
+    /** @type {import('../models/opportunity.js').Opportunity[]} */
     const opportunities = [];
 
-    for (const [buyExchangeName, buyTickers] of exchangesData) {
-        for (const [sellExchangeName, sellTickers] of exchangesData) {
+    for (const [buyExchangeName, buyTickers] of exchangesMap) {
+        for (const [sellExchangeName, sellTickers] of exchangesMap) {
             if (buyExchangeName === sellExchangeName) continue;
 
             for (const [buyTickerSymbol, buyTickerData] of buyTickers) {
