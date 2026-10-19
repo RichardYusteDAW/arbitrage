@@ -1,9 +1,11 @@
+import { createHmac } from 'node:crypto';
+import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
 const binanceAdapter = {
-    
+
     async discover(config, request) {
 
         const data = await request(config.pairsUrl);
@@ -15,6 +17,33 @@ const binanceAdapter = {
                 return assets ? [new ExchangePair({ id: pair.symbol, ...assets })] : [];
             });
     },
+
+    async getWithdrawalStatuses(request, { apiKey, apiSecret } = {}) {
+        if (!apiKey || !apiSecret)
+            return [];
+
+        const clock = await request('https://api.binance.com/api/v3/time');
+
+        if (!Number.isFinite(clock.serverTime) || clock.serverTime <= 0)
+            throw new Error('Invalid Binance server time');
+
+        const query = new URLSearchParams({ timestamp: String(clock.serverTime), recvWindow: '5000' }).toString();
+        const signature = createHmac('sha256', apiSecret).update(query).digest('hex');
+        const response = await request('https://api.binance.com/sapi/v1/capital/config/getall?' + query + '&signature=' + signature, {
+            headers: { 'X-MBX-APIKEY': apiKey }
+        });
+
+        if (!Array.isArray(response))
+            throw new Error('Binance currencies request failed');
+
+        return response.flatMap(coin => {
+            const assets = normalizeAssets('binance', coin.coin, '');
+            const withdraw = coin.withdrawAllEnable === false ? false
+                : withdrawalAvailability((coin.networkList ?? []).map(network => network.withdrawEnable));
+            return assets ? [{ asset: assets.baseAsset, withdraw }] : [];
+        });
+    },
+
     subscriptions(pairs) {
         return [
             {
@@ -24,6 +53,7 @@ const binanceAdapter = {
             }
         ];
     },
+
     createParser(pairs) {
         const pairsMap = new Map(pairs.map(pair => [pair.id, pair]));
 
@@ -33,6 +63,7 @@ const binanceAdapter = {
 
             const ticker = message.data ?? message;
             const pair = pairsMap.get(ticker.s);
+
             if (!pair)
                 return [];
 

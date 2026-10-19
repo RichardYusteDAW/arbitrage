@@ -4,7 +4,7 @@ import { EXCHANGES } from '../../../config.js';
 let instance;
 
 const getPairDiscoveryService = () => {
-    if (!instance) 
+    if (!instance)
         instance = new PairDiscoveryService(EXCHANGES);
 
     return instance;

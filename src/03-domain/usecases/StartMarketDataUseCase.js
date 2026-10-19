@@ -8,7 +8,7 @@ class StartMarketDataUseCase {
         createConnection,
         WebSocketImpl,
         reconnectDelay,
-        timing 
+        timing
     }) {
         this.discovery = pairDiscovery;
         this.connections = connections;
@@ -56,22 +56,27 @@ class StartMarketDataUseCase {
         this.connections.setState(exchangeName, 'cargando pares');
         try {
             const discovered = await this.discovery.discover(exchangeName, url => this.client.request(url));
-            if (!discovered) return;
+
+            if (!discovered)
+                return;
+
             this.rebuildConnections();
         } catch (error) {
-            if (this.discovery.isStopped()) return;
+            if (this.discovery.isStopped())
+                return;
+
             this.connections.setState(exchangeName, 'reintentando pares', error.message);
             this.discovery.scheduleRetry(() => { void this.discover(exchangeName); }, this.timing.discoveryRetryDelay);
         }
     }
 
     execute() {
-        if (!this.discovery.begin()) 
+        if (!this.discovery.begin())
             return;
 
         if (!this.WebSocketImpl)
             throw new Error('WebSocket unavailable: use Node.js 22 or newer');
-        
+
         for (const name of this.discovery.getExchangeNames())
             void this.discover(name);
     }

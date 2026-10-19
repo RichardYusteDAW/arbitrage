@@ -2,8 +2,11 @@ import WithdrawalStatusService from '../../../03-domain/services/withdrawalStatu
 import { TIMING } from '../../../config.js';
 
 let instance;
+
 const getWithdrawalStatusService = () => {
-    if (!instance) instance = new WithdrawalStatusService(TIMING.withdrawalRefreshInterval * 2);
+    if (!instance)
+        instance = new WithdrawalStatusService(TIMING.withdrawalRefreshInterval * 2);
+
     return instance;
 };
 

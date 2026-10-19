@@ -14,14 +14,19 @@ class WithdrawalStatusService {
 
     get(exchange, asset) {
         const snapshot = this.#statuses.get(exchange);
-        if (!snapshot || Date.now() - snapshot.receivedAt > this.maxAge) return null;
+
+        if (!snapshot || Date.now() - snapshot.receivedAt > this.maxAge)
+            return null;
+
         const status = snapshot.assets.get(asset);
         return typeof status === 'boolean' ? status : null;
     }
 
     clear(exchange) {
-        if (exchange === undefined) this.#statuses.clear();
-        else this.#statuses.delete(exchange);
+        if (exchange === undefined)
+            this.#statuses.clear();
+        else
+            this.#statuses.delete(exchange);
     }
 }
 

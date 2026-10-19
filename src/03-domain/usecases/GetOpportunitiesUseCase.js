@@ -1,5 +1,5 @@
 class GetOpportunitiesUseCase {
-    
+
     constructor(quoteStore, calculateOpportunities, withdrawalStatus) {
         this.quoteStore = quoteStore;
         this.withdrawalStatus = withdrawalStatus;

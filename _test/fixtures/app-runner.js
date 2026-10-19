@@ -1,3 +1,13 @@
+process.env.OKX_API_BASE_URL = 'https://www.okx.com';
+process.env.OKX_API_KEY = 'test-okx-key';
+process.env.OKX_API_SECRET = 'test-okx-secret';
+process.env.OKX_API_PASSPHRASE = 'test-okx-passphrase';
+process.env.BYBIT_API_KEY = 'test-bybit-key';
+process.env.BYBIT_API_SECRET = 'test-bybit-secret';
+process.env.KRAKEN_API_KEY = 'test-kraken-key';
+process.env.KRAKEN_API_SECRET = 'dGVzdC1zZWNyZXQ=';
+process.env.BINANCE_API_KEY = 'test-binance-key';
+process.env.BINANCE_API_SECRET = 'test-binance-secret';
 import { createFakeSocket, product, level, bookMessage } from '../fixtures.js';
 
 // This child process runs the actual entry point with no external requests.
@@ -37,14 +47,35 @@ globalThis.fetch = async (input, options) => {
     const url = new URL(input);
     requested.push(url.toString());
     let data;
-    if (url.hostname === 'api.binance.com' && url.pathname.endsWith('exchangeInfo')) {
+    if (url.hostname === 'api.binance.com' && url.pathname.endsWith('/time')) {
+        data = { serverTime: Date.now() };
+    } else if (url.hostname === 'api.binance.com' && url.pathname.endsWith('/capital/config/getall')) {
+        if (options.headers['X-MBX-APIKEY'] !== 'test-binance-key') throw new Error('Missing test API key');
+        data = [{ coin: 'ETH', withdrawAllEnable: true, networkList: [{ withdrawEnable: true }] }];
+    } else if (url.hostname === 'api.binance.com' && url.pathname.endsWith('exchangeInfo')) {
         data = { symbols: [{ symbol: 'ETHUSDT', baseAsset: 'ETH', status: 'TRADING' }] };
+    } else if (url.hostname === 'api.kraken.com' && url.pathname === '/funding/v1/assets/withdraw') {
+        if (options.headers['API-Key'] !== 'test-kraken-key') throw new Error('Missing Kraken test key');
+        data = { currency: [{ name: 'ETH' }] };
+    } else if (url.hostname === 'api.kraken.com' && url.pathname.endsWith('/Assets')) {
+        data = { error: [], result: { XETH: { altname: 'ETH', status: 'enabled' } } };
     } else if (url.hostname === 'api.kraken.com' && url.pathname.endsWith('AssetPairs')) {
         data = { error: [], result: { ETHUSDT: { status: 'online', wsname: 'ETH/USDT' } } };
     } else if (url.hostname === 'api.coinbase.com' && url.pathname.endsWith('/products')) {
         data = { products: [product()], pagination: { has_next: false } };
+    } else if (url.hostname === 'www.okx.com' && url.pathname.endsWith('/public/time')) {
+        data = { code: '0', data: [{ ts: String(Date.now()) }] };
+    } else if (url.hostname === 'www.okx.com' && url.pathname.endsWith('/asset/currencies')) {
+        if (options.headers['OK-ACCESS-KEY'] !== 'test-okx-key') throw new Error('Missing OKX test key');
+        if (options.headers['OK-ACCESS-PASSPHRASE'] !== 'test-okx-passphrase') throw new Error('Missing OKX test passphrase');
+        data = { code: '0', data: [{ ccy: 'ETH', chain: 'ETH-Ethereum', canWd: true }] };
     } else if (url.hostname === 'www.okx.com' && url.pathname.endsWith('/instruments')) {
         data = { code: '0', data: [{ instType: 'SPOT', state: 'live', instId: 'ETH-USDT', baseCcy: 'ETH', quoteCcy: 'USDT' }] };
+    } else if (url.hostname === 'api.bybit.com' && url.pathname.endsWith('/market/time')) {
+        data = { retCode: 0, time: Date.now() };
+    } else if (url.hostname === 'api.bybit.com' && url.pathname.endsWith('/coin/query-info')) {
+        if (options.headers['X-BAPI-API-KEY'] !== 'test-bybit-key') throw new Error('Missing Bybit test key');
+        data = { retCode: 0, result: { rows: [{ coin: 'ETH', chains: [{ chainWithdraw: '1', withdrawFee: '0' }] }] } };
     } else if (url.hostname === 'api.bybit.com' && url.pathname.endsWith('/instruments-info')) {
         data = { retCode: 0, result: { list: [{ symbol: 'ETHUSDT', baseCoin: 'ETH', quoteCoin: 'USDT', status: 'Trading' }] } };
     } else if (url.hostname === 'api.bitget.com' && url.pathname.endsWith('/instruments')) {

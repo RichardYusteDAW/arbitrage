@@ -2,7 +2,7 @@ import { TickerData } from '../models/ticker.js';
 import { TIMING } from '../../config.js';
 
 class QuoteStoreService {
-    
+
     constructor(exchangeNames, maxAge = TIMING.quoteMaxAge) {
         this.maxAge = maxAge;
         this.exchanges = new Map(exchangeNames.map(name => [name, new Map()]));
@@ -10,11 +10,11 @@ class QuoteStoreService {
 
     update(exchangeName, tickers) {
         const quotes = this.exchanges.get(exchangeName);
-        
+
         for (const ticker of tickers) {
             const valid = [ticker.askPrice, ticker.bidPrice, ticker.askQty, ticker.bidQty]
                 .every(value => Number.isFinite(value) && value > 0);
-            
+
                 if (!valid) {
                 quotes.delete(ticker.symbol);
                 continue;
@@ -27,12 +27,12 @@ class QuoteStoreService {
     remove(exchangeName, pairs) {
         const quotes = this.exchanges.get(exchangeName);
 
-        for (const pair of pairs) 
+        for (const pair of pairs)
             quotes.delete(pair.symbol);
     }
 
     clear() {
-        for (const quotes of this.exchanges.values()) 
+        for (const quotes of this.exchanges.values())
             quotes.clear();
     }
 

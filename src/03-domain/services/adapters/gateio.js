@@ -7,8 +7,8 @@ const gateioAdapter = {
 
     async discover(config, request) {
         const response = await request(config.pairsUrl);
-        
-        if (!Array.isArray(response)) 
+
+        if (!Array.isArray(response))
             throw new Error(response.message || 'Gate.io discovery failed');
 
         return response
@@ -21,7 +21,10 @@ const gateioAdapter = {
 
     async getWithdrawalStatuses(request) {
         const response = await request('https://api.gateio.ws/api/v4/spot/currencies');
-        if (!Array.isArray(response)) throw new Error(response.message || 'Gate.io currencies failed');
+
+        if (!Array.isArray(response))
+            throw new Error(response.message || 'Gate.io currencies failed');
+
         return response.flatMap(coin => {
             const assets = normalizeAssets('gateio', coin.currency, '');
             const chains = coin.chains?.length ? coin.chains : [coin];
@@ -41,18 +44,18 @@ const gateioAdapter = {
         const pairsMap = new Map(pairs.map(pair => [pair.id, pair]));
         return message => {
 
-            if (message.error) 
+            if (message.error)
                 throw new Error(message.error.message || 'Gate.io subscription failed');
 
-            if (message.channel !== 'spot.book_ticker' || message.event !== 'update') 
+            if (message.channel !== 'spot.book_ticker' || message.event !== 'update')
                 return [];
 
             const ticker = message.result;
             const pair = pairsMap.get(ticker.s);
 
-            if (!pair) 
+            if (!pair)
                 return [];
-            
+
             return [new TickerData({
                 symbol: pair.symbol,
                 baseAsset: pair.baseAsset,

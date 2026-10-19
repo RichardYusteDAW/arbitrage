@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import { getRefreshWithdrawalStatusUseCase } from './01-common/containers/usecases/refreshWithdrawalStatusUseCaseIoC.js';
 import { TIMING } from './config.js';
 import ArbitrageController from './02-presentation/controllers/ArbitrageController.js';
@@ -7,6 +8,8 @@ import { getStartMarketDataUseCase } from './01-common/containers/usecases/start
 import { getStopMarketDataUseCase } from './01-common/containers/usecases/stopMarketDataUseCaseIoC.js';
 import { getOpportunitiesUseCase } from './01-common/containers/usecases/getOpportunitiesUseCaseIoC.js';
 import { getMarketStatusUseCase } from './01-common/containers/usecases/getMarketStatusUseCaseIoC.js';
+
+dotenv.config({ quiet: true });
 
 const arbitrageController = new ArbitrageController({
     startMarketData: getStartMarketDataUseCase(),

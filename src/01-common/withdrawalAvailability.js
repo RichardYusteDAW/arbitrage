@@ -1,10 +1,10 @@
 const withdrawalAvailability = states => {
-    if (states.some(state => state === true)) 
+    if (states.some(state => state === true))
         return true;
 
-    if (states.length && states.every(state => state === false)) 
+    if (states.length && states.every(state => state === false))
         return false;
-    
+
     return null;
 };
 

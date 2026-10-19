@@ -19,11 +19,14 @@ const calculateMaxVolume = (baseAsset, askQty, bidQty, market) => {
         Number(bidQty)
     );
 
-    if (!Number.isFinite(maxQty) || maxQty <= 0) return null;
+    if (!Number.isFinite(maxQty) || maxQty <= 0)
+        return null;
 
     for (const quote of ['USD', 'USDT', 'USDC']) {
         const ticker = market.get(baseAsset + quote);
-        if (!ticker) continue;
+
+        if (!ticker)
+            continue;
 
         const price = Number(ticker.askPrice);
         return Number.isFinite(price) && price > 0 ? maxQty * price : null;
@@ -41,7 +44,9 @@ const createExchangeMaps = exchangesData => new Map(
 
 const calculateOpportunity = (buyExchangeName, sellExchangeName, buyTickerData, sellTickerData, buyTickers) => {
     const profitability = calculateProfitability(buyTickerData.askPrice, sellTickerData.bidPrice);
-    if (!(profitability > 0)) return null;
+
+    if (!(profitability > 0))
+        return null;
 
     const maxVolumeUSD = calculateMaxVolume(
         buyTickerData.baseAsset ?? sellTickerData.baseAsset,
@@ -66,17 +71,24 @@ const calculateOpportunities = exchangesData => {
 
     for (const [buyExchangeName, buyTickers] of exchangesMap) {
         for (const [sellExchangeName, sellTickers] of exchangesMap) {
-            if (buyExchangeName === sellExchangeName) continue;
+            if (buyExchangeName === sellExchangeName)
+                continue;
 
             for (const [buyTickerSymbol, buyTickerData] of buyTickers) {
 
-                if (!buyTickerSymbol) continue;
+                if (!buyTickerSymbol)
+                    continue;
 
                 const sellTickerData = sellTickers.get(buyTickerSymbol);
-                if (!sellTickerData) continue;
+
+                if (!sellTickerData)
+                    continue;
 
                 const opportunity = calculateOpportunity(buyExchangeName, sellExchangeName, buyTickerData, sellTickerData, buyTickers);
-                if (!opportunity) continue;
+
+                if (!opportunity)
+                    continue;
+
                 opportunities.push(opportunity);
             }
         }

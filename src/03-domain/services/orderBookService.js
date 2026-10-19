@@ -1,5 +1,5 @@
 class OrderBookService {
-    
+
     constructor() {
         this.bids = new Map();
         this.asks = new Map();
@@ -27,11 +27,15 @@ class OrderBookService {
         let bidPrice = 0;
         let askPrice = Infinity;
 
-        for (const price of this.bids.keys()) 
-            if (price > bidPrice) bidPrice = price;
+        for (const price of this.bids.keys())
 
-        for (const price of this.asks.keys()) 
-            if (price < askPrice) askPrice = price;
+            if (price > bidPrice)
+                bidPrice = price;
+
+        for (const price of this.asks.keys())
+
+            if (price < askPrice)
+                askPrice = price;
 
         return {
             bidPrice,

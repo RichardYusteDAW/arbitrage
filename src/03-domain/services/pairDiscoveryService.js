@@ -23,7 +23,9 @@ class PairDiscoveryService {
     }
 
     begin() {
-        if (this.#started) return false;
+        if (this.#started)
+            return false;
+
         this.#started = true;
         return true;
     }
@@ -35,7 +37,10 @@ class PairDiscoveryService {
     async discover(exchangeName, request) {
         const config = this.getConfig(exchangeName);
         const pairs = await config.adapter.discover(config, request);
-        if (this.#stopped) return false;
+
+        if (this.#stopped)
+            return false;
+
         this.#catalogs[exchangeName] = pairs;
         return true;
     }

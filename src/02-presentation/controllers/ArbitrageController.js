@@ -1,5 +1,5 @@
 class ArbitrageController {
-    
+
     constructor({ startMarketData, stopMarketData, getOpportunities, getMarketStatus, refreshWithdrawalStatus, renderConsole }) {
         this.startMarketData = startMarketData;
         this.stopMarketData = stopMarketData;

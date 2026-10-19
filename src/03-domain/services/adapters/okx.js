@@ -1,3 +1,5 @@
+import { createHmac } from 'node:crypto';
+import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -5,7 +7,8 @@ import { TickerData } from '../../models/ticker.js';
 const okxAdapter = {
     async discover(config, request) {
         const response = await request(config.pairsUrl);
-        if (response.code !== '0') 
+
+        if (response.code !== '0')
             throw new Error(response.msg || 'OKX discovery failed');
 
         return response.data
@@ -14,6 +17,59 @@ const okxAdapter = {
                 const assets = normalizeAssets('okx', pair.baseCcy, pair.quoteCcy);
                 return assets ? [new ExchangePair({ id: pair.instId, ...assets })] : [];
             });
+    },
+
+    async getWithdrawalStatuses(request, { apiKey, apiSecret, passphrase, apiBaseUrl = 'https://www.okx.com' } = {}) {
+        if (!apiKey || !apiSecret || !passphrase)
+            return [];
+
+        const allowedDomains = ['https://www.okx.com', 'https://openapi.okx.com', 'https://eea.okx.com', 'https://us.okx.com', 'https://tr.okx.com'];
+
+        if (!allowedDomains.includes(apiBaseUrl))
+            throw new Error('Invalid OKX API domain');
+
+        const clock = await request(apiBaseUrl + '/api/v5/public/time');
+        const serverTime = Number(clock.data?.[0]?.ts);
+
+        if (clock.code !== '0' || !Number.isFinite(serverTime) || serverTime <= 0)
+            throw new Error('Invalid OKX server time');
+
+        const timestamp = new Date(serverTime).toISOString();
+        const path = '/api/v5/asset/currencies';
+        const signature = createHmac('sha256', apiSecret).update(timestamp + 'GET' + path).digest('base64');
+        const response = await request(apiBaseUrl + path, {
+            headers: {
+                'OK-ACCESS-KEY': apiKey,
+                'OK-ACCESS-SIGN': signature,
+                'OK-ACCESS-TIMESTAMP': timestamp,
+                'OK-ACCESS-PASSPHRASE': passphrase,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.code !== '0' || !Array.isArray(response.data)) {
+            const error = new Error('OKX currencies request failed');
+            error.apiCode = response.code;
+            throw error;
+        }
+
+        const networksByAsset = new Map();
+
+        for (const coin of response.data) {
+            const assets = normalizeAssets('okx', coin.ccy, '');
+
+            if (!assets)
+                continue;
+
+            const networks = networksByAsset.get(assets.baseAsset) ?? [];
+            networks.push(coin.canWd);
+            networksByAsset.set(assets.baseAsset, networks);
+        }
+
+        return [...networksByAsset].map(([asset, states]) => ({
+            asset,
+            withdraw: withdrawalAvailability(states)
+        }));
     },
 
     subscriptions(pairs) {
@@ -31,9 +87,9 @@ const okxAdapter = {
             if (message.event === 'error' || (message.code !== undefined && message.code !== '0'))
                 throw new Error(message.msg || 'OKX subscription failed');
 
-            if (message.arg?.channel !== 'tickers' || !message.data) 
+            if (message.arg?.channel !== 'tickers' || !message.data)
                 return [];
-            
+
             return message.data.flatMap(ticker => {
                 const pair = pairsMap.get(ticker.instId);
                 return pair ? [new TickerData({

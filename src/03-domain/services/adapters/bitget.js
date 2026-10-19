@@ -7,9 +7,10 @@ const bitgetAdapter = {
 
     async discover(config, request) {
         const response = await request(config.pairsUrl);
-        if (response.code !== '00000') 
+
+        if (response.code !== '00000')
             throw new Error(response.msg || 'Bitget discovery failed');
-        
+
         return response.data
             .filter(pair => pair.category === 'SPOT' && pair.status === 'online')
             .flatMap(pair => {
@@ -20,7 +21,10 @@ const bitgetAdapter = {
 
     async getWithdrawalStatuses(request) {
         const response = await request('https://api.bitget.com/api/v2/spot/public/coins');
-        if (response.code !== '00000') throw new Error(response.msg || 'Bitget currencies failed');
+
+        if (response.code !== '00000')
+            throw new Error(response.msg || 'Bitget currencies failed');
+
         return response.data.flatMap(coin => {
             const assets = normalizeAssets('bitget', coin.coin, '');
             return assets ? [{ asset: assets.baseAsset,
@@ -45,11 +49,12 @@ const bitgetAdapter = {
             if (message.event === 'error' || (message.code !== undefined && message.code !== '00000'))
                 throw new Error(message.msg || 'Bitget subscription failed');
 
-            if (message.arg?.instType !== 'spot' || message.arg.topic !== 'ticker' || !message.data) 
+            if (message.arg?.instType !== 'spot' || message.arg.topic !== 'ticker' || !message.data)
                 return [];
 
             const pair = pairsMap.get(message.arg.symbol);
-            if (!pair) 
+
+            if (!pair)
                 return [];
 
             return message.data.map(ticker => new TickerData({

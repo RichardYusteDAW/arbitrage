@@ -4,7 +4,7 @@ import { EXCHANGES } from '../../../config.js';
 let instance;
 
 const getConnectionService = () => {
-    if (!instance) 
+    if (!instance)
         instance = new ConnectionService(Object.keys(EXCHANGES));
 
     return instance;

@@ -3,9 +3,9 @@ import RequestClientService from '../../../03-domain/services/requestClientServi
 let instance;
 
 const getRequestClientService = () => {
-    if (!instance) 
+    if (!instance)
         instance = new RequestClientService();
-    
+
     return instance;
 };
 

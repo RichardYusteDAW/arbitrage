@@ -1,17 +1,17 @@
 import { TIMING } from '../../config.js';
 
 class WebSocketConnectionService {
-    
-    constructor({ 
-        exchangeName, 
+
+    constructor({
+        exchangeName,
         config,
-        pairs, 
+        pairs,
         prepareConnection,
         WebSocketImpl = globalThis.WebSocket,
-        reconnectDelay = TIMING.reconnectDelay, 
-        onTickers, 
-        onDisconnect, 
-        onState 
+        reconnectDelay = TIMING.reconnectDelay,
+        onTickers,
+        onDisconnect,
+        onState
     }) {
         this.exchangeName = exchangeName;
         this.config = config;
@@ -68,7 +68,10 @@ class WebSocketConnectionService {
 
         try {
             const settings = this.prepareConnection ? await this.prepareConnection() : {};
-            if (this.stopped) return;
+
+            if (this.stopped)
+                return;
+
             const parse = this.config.adapter.createParser(this.pairs);
             socket = new this.WebSocketImpl(settings.websocketUrl ?? this.config.websocketUrl);
             this.socket = socket;
@@ -102,6 +105,7 @@ class WebSocketConnectionService {
                         if (this.config.adapter.heartbeat) {
                             const heartbeat = this.config.adapter.heartbeat();
                             socket.send(typeof heartbeat === 'string' ? heartbeat : JSON.stringify(heartbeat));
+
                             if (settings.heartbeatTimeout) {
                                 this.pongTimer = setTimeout(() => fail(new Error('Heartbeat pong timeout')), settings.heartbeatTimeout);
                             }
@@ -124,8 +128,11 @@ class WebSocketConnectionService {
                     const message = this.config.adapter.decodeMessage
                         ? this.config.adapter.decodeMessage(event.data)
                         : JSON.parse(event.data);
+
                     if (message !== null) {
-                        if (this.config.adapter.isPong?.(message)) clearTimeout(this.pongTimer);
+                        if (this.config.adapter.isPong?.(message))
+                            clearTimeout(this.pongTimer);
+
                         this.onTickers(parse(message));
                     }
 
@@ -137,8 +144,8 @@ class WebSocketConnectionService {
             socket.addEventListener('error', () => fail(new Error('WebSocket connection error')));
             socket.addEventListener('close', event => fail(new Error(`Connection closed (${event.code})`)));
 
-        } catch (error) { 
-            fail(error); 
+        } catch (error) {
+            fail(error);
         }
     }
 

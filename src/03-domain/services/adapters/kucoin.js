@@ -18,10 +18,12 @@ const kucoinAdapter = {
 
     async prepareConnection(config, request) {
         const response = await request('https://api.kucoin.com/api/v1/bullet-public', { method: 'POST' });
-        if (response.code !== '200000') 
+
+        if (response.code !== '200000')
             throw new Error(response.msg || 'KuCoin token request failed');
 
         const server = response.data.instanceServers.find(server => server.protocol === 'websocket' && server.encrypt);
+
         if (!server || !response.data.token || !(server.pingInterval > 0) || !(server.pingTimeout > 0))
             throw new Error('Invalid KuCoin WebSocket configuration');
 
@@ -35,7 +37,10 @@ const kucoinAdapter = {
 
     async getWithdrawalStatuses(request) {
         const response = await request('https://api.kucoin.com/api/v3/currencies');
-        if (response.code !== '200000') throw new Error(response.msg || 'KuCoin currencies failed');
+
+        if (response.code !== '200000')
+            throw new Error(response.msg || 'KuCoin currencies failed');
+
         return response.data.flatMap(coin => {
             const assets = normalizeAssets('kucoin', coin.currency, '');
             return assets ? [{ asset: assets.baseAsset,
@@ -54,16 +59,17 @@ const kucoinAdapter = {
         const pairsMap = new Map(pairs.map(pair => [pair.id, pair]));
         return message => {
 
-            if (message.type === 'error') 
+            if (message.type === 'error')
                 throw new Error(message.data || 'KuCoin subscription failed');
 
-            if (message.type !== 'message' || !message.topic?.startsWith('/market/ticker:')) 
+            if (message.type !== 'message' || !message.topic?.startsWith('/market/ticker:'))
                 return [];
 
             const pair = pairsMap.get(message.topic.slice('/market/ticker:'.length));
-            if (!pair) 
+
+            if (!pair)
                 return [];
-            
+
             return [new TickerData({
                 symbol: pair.symbol, baseAsset: pair.baseAsset,
                 bidPrice: Number(message.data.bestBid), bidQty: Number(message.data.bestBidSize),

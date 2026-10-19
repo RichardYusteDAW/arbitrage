@@ -1,7 +1,7 @@
 import { TIMING } from '../../config.js';
 
 class RequestClientService {
-    
+
     constructor({ fetchImpl = globalThis.fetch, timeout = TIMING.requestTimeout } = {}) {
         this.fetchImpl = fetchImpl;
         this.timeout = timeout;
@@ -15,10 +15,12 @@ class RequestClientService {
 
         try {
             const response = await this.fetchImpl(url, { ...options, signal: controller.signal });
+
             if (!response.ok)
                 throw new Error(`HTTP ${response.status}`);
+
             return await response.json();
-            
+
         } finally {
             clearTimeout(timer);
             this.pendingRequests.delete(controller);
