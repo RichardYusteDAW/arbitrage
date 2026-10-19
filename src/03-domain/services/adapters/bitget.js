@@ -1,3 +1,4 @@
+import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
@@ -10,11 +11,10 @@ const bitgetAdapter = {
         
         return response.data
             .filter(pair => pair.category === 'SPOT' && pair.status === 'online')
-            .map(pair => new ExchangePair({
-                id: pair.symbol,
-                symbol: pair.baseCoin + pair.quoteCoin,
-                baseAsset: pair.baseCoin
-            }));
+            .flatMap(pair => {
+                const assets = normalizeAssets('bitget', pair.baseCoin, pair.quoteCoin);
+                return assets ? [new ExchangePair({ id: pair.symbol, ...assets })] : [];
+            });
     },
 
     subscriptions(pairs) {

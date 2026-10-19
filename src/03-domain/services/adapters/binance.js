@@ -1,3 +1,4 @@
+import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
@@ -9,11 +10,10 @@ const binanceAdapter = {
 
         return data.symbols
             .filter(pair => pair.status === 'TRADING' && pair.isSpotTradingAllowed !== false)
-            .map(pair => new ExchangePair({
-                id: pair.symbol,
-                symbol: pair.symbol,
-                baseAsset: pair.baseAsset
-            }));
+            .flatMap(pair => {
+                const assets = normalizeAssets('binance', pair.baseAsset, pair.quoteAsset ?? pair.symbol.slice(pair.baseAsset.length));
+                return assets ? [new ExchangePair({ id: pair.symbol, ...assets })] : [];
+            });
     },
     subscriptions(pairs) {
         return [

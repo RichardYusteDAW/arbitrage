@@ -1,3 +1,4 @@
+import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 import OrderBookService from '../orderBookService.js';
@@ -43,11 +44,10 @@ const coinbaseAdapter = {
                 && !product.limit_only
                 && !product.post_only)
             .filter(product => !product.alias || product.alias === product.product_id)
-            .map(product => new ExchangePair({
-                id: product.product_id,
-                symbol: product.base_currency_id + product.quote_currency_id,
-                baseAsset: product.base_currency_id
-            }));
+            .flatMap(product => {
+                const assets = normalizeAssets('coinbase', product.base_currency_id, product.quote_currency_id);
+                return assets ? [new ExchangePair({ id: product.product_id, ...assets })] : [];
+            });
     },
     subscriptions(pairs) {
         return [

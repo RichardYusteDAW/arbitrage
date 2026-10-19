@@ -1,3 +1,4 @@
+import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
@@ -9,11 +10,10 @@ const okxAdapter = {
 
         return response.data
             .filter(pair => pair.instType === 'SPOT' && pair.state === 'live' && pair.instCategory !== '3')
-            .map(pair => new ExchangePair({
-                id: pair.instId,
-                symbol: pair.baseCcy + pair.quoteCcy,
-                baseAsset: pair.baseCcy
-            }));
+            .flatMap(pair => {
+                const assets = normalizeAssets('okx', pair.baseCcy, pair.quoteCcy);
+                return assets ? [new ExchangePair({ id: pair.instId, ...assets })] : [];
+            });
     },
 
     subscriptions(pairs) {

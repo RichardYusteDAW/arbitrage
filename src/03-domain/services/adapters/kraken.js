@@ -1,7 +1,8 @@
+import normalizeAssets from '../../../01-common/normalizeAssets.js';
+import ASSET_EXCEPTIONS from '../../../01-common/assetExceptions.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
-const ALIASES = { XBT: 'BTC', XDG: 'DOGE' };
 
 const krakenAdapter = {
     
@@ -14,15 +15,13 @@ const krakenAdapter = {
 
         return Object.values(data.result)
             .filter(pair => pair.status === 'online' && pair.wsname)
-            .map(pair => {
-                const assets = pair.wsname.split('/').map(asset => ALIASES[asset] ?? asset);
-                return new ExchangePair(
-                    {
-                        id: assets.join('/'),
-                        symbol: assets.join(''),
-                        baseAsset: assets[0]
-                    }
-                );
+            .flatMap(pair => {
+                const [base, quote] = pair.wsname.split('/');
+                const assets = normalizeAssets('kraken', base, quote);
+                if (!assets) return [];
+                const subscriptionAliases = ASSET_EXCEPTIONS.kraken.subscriptionAliases;
+                const id = [base, quote].map(asset => subscriptionAliases[asset] ?? asset).join('/');
+                return [new ExchangePair({ id, ...assets })];
             });
     },
     subscriptions(pairs) {

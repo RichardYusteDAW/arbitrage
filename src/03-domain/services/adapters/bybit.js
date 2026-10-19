@@ -1,3 +1,4 @@
+import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
@@ -10,11 +11,10 @@ const bybitAdapter = {
 
         return response.result.list
             .filter(pair => pair.status === 'Trading')
-            .map(pair => new ExchangePair({
-                id: pair.symbol,
-                symbol: pair.baseCoin + pair.quoteCoin,
-                baseAsset: pair.baseCoin
-            }));
+            .flatMap(pair => {
+                const assets = normalizeAssets('bybit', pair.baseCoin, pair.quoteCoin);
+                return assets ? [new ExchangePair({ id: pair.symbol, ...assets })] : [];
+            });
     },
 
     subscriptions(pairs) {

@@ -1,3 +1,4 @@
+import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
@@ -11,11 +12,10 @@ const gateioAdapter = {
 
         return response
             .filter(pair => pair.trade_status === 'tradable' && pair.type !== 'premarket')
-            .map(pair => new ExchangePair({
-                id: pair.id,
-                symbol: pair.base + pair.quote,
-                baseAsset: pair.base
-            }));
+            .flatMap(pair => {
+                const assets = normalizeAssets('gateio', pair.base, pair.quote);
+                return assets ? [new ExchangePair({ id: pair.id, ...assets })] : [];
+            });
     },
 
     subscriptions(pairs) {

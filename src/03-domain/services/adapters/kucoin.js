@@ -1,3 +1,4 @@
+import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
@@ -8,11 +9,10 @@ const kucoinAdapter = {
         if (response.code !== '200000')
             throw new Error(response.msg || 'KuCoin discovery failed');
 
-        return response.data.filter(pair => pair.enableTrading === true).map(pair => new ExchangePair({
-            id: pair.symbol,
-            symbol: pair.baseCurrency + pair.quoteCurrency,
-            baseAsset: pair.baseCurrency
-        }));
+        return response.data.filter(pair => pair.enableTrading === true).flatMap(pair => {
+                const assets = normalizeAssets('kucoin', pair.baseCurrency, pair.quoteCurrency);
+                return assets ? [new ExchangePair({ id: pair.symbol, ...assets })] : [];
+            });
     },
 
     async prepareConnection(config, request) {
