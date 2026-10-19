@@ -14,15 +14,16 @@ test('Binance descubre solo pares activos y habilitados para spot', async () => 
     assert.deepEqual(result, [pair()]);
 });
 
-test('Binance suscribe bookTicker, normaliza mensajes directos y combinados y propaga errores', () => {
-    assert.deepEqual(binance.subscriptions([pair()]), [{ method: 'SUBSCRIBE', params: ['ethusdt@bookTicker'], id: 1 }]);
+test('Binance suscribe profundidad combinada y conserva sus niveles', () => {
+    assert.deepEqual(binance.subscriptions([pair()]), [
+        { method: 'SET_PROPERTY', params: ['combined', true], id: 0 },
+        { method: 'SUBSCRIBE', params: ['ethusdt@depth20@100ms'], id: 1 }
+    ]);
     const parse = binance.createParser([pair()]);
-    const message = { s: 'ETHUSDT', b: '99', B: '0.5', a: '100', A: '0.75' };
-    const expected = [ticker({ bidQty: 0.5, askQty: 0.75 })];
-    assert.deepEqual(parse(message), expected);
-    assert.deepEqual(parse({ data: message }), expected);
+    const message = { stream: 'ethusdt@depth20@100ms', data: { bids: [['99', '0.5']], asks: [['100', '0.75']] } };
+    assert.deepEqual(parse(message), [ticker({ bidQty: 0.5, askQty: 0.75 })]);
     assert.deepEqual(parse({ result: null, id: 1 }), []);
-    assert.deepEqual(parse({ ...message, s: 'UNKNOWN' }), []);
+    assert.deepEqual(parse({ ...message, stream: 'unknown@depth20@100ms' }), []);
     assert.throws(() => parse({ code: 2, msg: 'Invalid subscription' }), /Invalid subscription/);
 });
 
@@ -35,16 +36,17 @@ test('Kraken filtra pares y conserva los aliases XBT y XDG', async () => {
     await assert.rejects(kraken.discover({}, async () => ({ error: ['EService:Unavailable'] })), /Unavailable/);
 });
 
-test('Kraken suscribe snapshots BBO y normaliza cantidades fraccionarias', () => {
+test('Kraken suscribe profundidad y normaliza cantidades fraccionarias', () => {
     const pairs = [pair('ETHUSDT', 'ETH', 'ETH/USDT')];
     const subscription = kraken.subscriptions(pairs)[0];
-    assert.equal(subscription.params.event_trigger, 'bbo');
+    assert.equal(subscription.params.channel, 'book');
+    assert.equal(subscription.params.depth, 25);
     assert.equal(subscription.params.snapshot, true);
     assert.deepEqual(subscription.params.symbol, ['ETH/USDT']);
     assert.deepEqual(kraken.heartbeat(), { method: 'ping' });
     const parse = kraken.createParser(pairs);
     assert.deepEqual(parse({ channel: 'heartbeat' }), []);
-    const result = parse({ channel: 'ticker', data: [{ symbol: 'ETH/USDT', bid: 99, bid_qty: 0.25, ask: 100, ask_qty: 0.5 },
+    const result = parse({ channel: 'book', type: 'snapshot', data: [{ symbol: 'ETH/USDT', bids: [{ price: 99, qty: 0.25 }], asks: [{ price: 100, qty: 0.5 }] },
         { symbol: 'UNKNOWN' }] });
     assert.equal(result.length, 1);
     assert.equal(result[0].bidQty, 0.25);

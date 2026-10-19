@@ -4,8 +4,10 @@ import { TickerData } from '../src/03-domain/models/ticker.js';
 
 export const flush = () => setImmediate();
 export const pair = (symbol = 'ETHUSDT', baseAsset = 'ETH', id = symbol) => new ExchangePair({ id, symbol, baseAsset });
-export const ticker = (changes = {}) => new TickerData({ symbol: 'ETHUSDT', baseAsset: 'ETH',
-    askPrice: 100, askQty: 2, bidPrice: 99, bidQty: 1, ...changes });
+export const ticker = (changes = {}) => {
+    const data = { symbol: 'ETHUSDT', baseAsset: 'ETH', askPrice: 100, askQty: 2, bidPrice: 99, bidQty: 1, ...changes };
+    return new TickerData({ ...data, bids: data.bids ?? [[data.bidPrice, data.bidQty]], asks: data.asks ?? [[data.askPrice, data.askQty]] });
+};
 export const product = (id = 'ETH-USDT', changes = {}) => ({ product_id: id,
     base_currency_id: id.split('-')[0], quote_currency_id: id.split('-')[1],
     product_type: 'SPOT', status: 'online', ...changes });

@@ -5,8 +5,8 @@ import WebSocketConnectionService from '../src/03-domain/services/webSocketConne
 import { pair, ticker, createFakeSocket, flush } from './fixtures.js';
 import { TIMING } from '../src/config.js';
 
-const snapshot = () => ({ arg: { instType: 'spot', topic: 'ticker', symbol: 'ETHUSDT' }, action: 'snapshot',
-    data: [{ bid1Price: '99', bid1Size: '0.5', ask1Price: '100', ask1Size: '0.75' }] });
+const snapshot = () => ({ arg: { instType: 'spot', topic: 'books5', symbol: 'ETHUSDT' }, action: 'snapshot',
+    data: [{ b: [['99', '0.5']], a: [['100', '0.75']] }] });
 
 test('Bitget descubre spot online y propaga errores REST', async () => {
     const instrument = { category: 'SPOT', symbol: 'ETHUSDT', baseCoin: 'ETH', quoteCoin: 'USDT', status: 'online' };
@@ -19,8 +19,8 @@ test('Bitget descubre spot online y propaga errores REST', async () => {
     await assert.rejects(bitget.discover({}, async () => ({ code: '40000', msg: 'Unavailable' })), /Unavailable/);
 });
 
-test('Bitget suscribe ticker v3 y obtiene el símbolo desde arg', () => {
-    assert.deepEqual(bitget.subscriptions([pair()]), [{ op: 'subscribe', args: [{ instType: 'spot', topic: 'ticker', symbol: 'ETHUSDT' }] }]);
+test('Bitget suscribe books5 v3 y obtiene el símbolo desde arg', () => {
+    assert.deepEqual(bitget.subscriptions([pair()]), [{ op: 'subscribe', args: [{ instType: 'spot', topic: 'books5', symbol: 'ETHUSDT' }] }]);
     const parse = bitget.createParser([pair()]);
     assert.deepEqual(parse(snapshot()), [ticker({ bidQty: 0.5, askQty: 0.75 })]);
     assert.deepEqual(parse({ event: 'subscribe', arg: snapshot().arg }), []);

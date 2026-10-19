@@ -49,11 +49,8 @@ const bitstampAdapter = {
             if (message.event !== 'data' || !pair)
                 return [];
 
-            const bid = message.data.bids[0] ?? [0, 0];
-            const ask = message.data.asks[0] ?? [0, 0];
             return [new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset,
-                bidPrice: Number(bid[0]), bidQty: Number(bid[1]),
-                askPrice: Number(ask[0]), askQty: Number(ask[1]) })];
+                bids: message.data.bids, asks: message.data.asks })];
         };
     }
 };

@@ -1,10 +1,11 @@
 class Opportunity {
 
-    constructor({ symbol, buy, sell, profitability, maxVolumeUSD, profitUSD, withdraw = null, deposit = null }) {
+    constructor({ symbol, buy, sell, profitability, quantity = null, maxVolumeUSD, profitUSD, withdraw = null, deposit = null }) {
         this.symbol = symbol;
         this.buy = buy;
         this.sell = sell;
         this.profitability = profitability;
+        this.quantity = quantity;
         this.maxVolumeUSD = maxVolumeUSD;
         this.profitUSD = profitUSD;
         this.withdraw = withdraw;

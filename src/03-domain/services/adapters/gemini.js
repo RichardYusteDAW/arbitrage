@@ -24,7 +24,7 @@ const geminiAdapter = {
     },
 
     subscriptions(pairs) {
-        return [{ id: 1, method: 'subscribe', params: pairs.map(pair => pair.id + '@bookTicker') }];
+        return [{ id: 1, method: 'subscribe', params: pairs.map(pair => pair.id + '@depth20@100ms') }];
     },
 
     createParser(pairs) {
@@ -34,14 +34,14 @@ const geminiAdapter = {
                 throw new Error(message.error?.msg || 'Gemini subscription failed');
 
             const ticker = message.data ?? message;
-            const pair = markets.get(ticker.s?.toLowerCase());
+            const id = message.stream?.split('@')[0] ?? ticker.symbol;
+            const pair = markets.get(id?.toLowerCase());
 
             if (!pair)
                 return [];
 
             return [new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset,
-                bidPrice: Number(ticker.b), bidQty: Number(ticker.B),
-                askPrice: Number(ticker.a), askQty: Number(ticker.A) })];
+                bids: ticker.bids, asks: ticker.asks })];
         };
     },
 

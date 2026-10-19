@@ -18,11 +18,11 @@ const opportunity = (changes = {}) => new Opportunity({ symbol: 'ETHUSDT', buy: 
 
 test('presentación formatea importes y porcentajes sin modificar el modelo ni sustituir null', () => {
     const input = opportunity();
-    assert.deepEqual(formatOpportunity(input), { symbol: 'ETHUSDT', buy: 'a', sell: 'b', profitability: '1.23%',
-        maxVolumeUSD: '100.12', profitUSD: '1.23', withdraw: null, deposit: null });
+    assert.deepEqual(formatOpportunity(input), { symbol: 'ETHUSDT', buy: 'a', sell: 'b', profitability: '1,23%',
+        quantity: null, maxVolume: '$100,12', profit: '$1,23', withdraw: null, deposit: null });
     assert.equal(input.profitability, 1.234567);
-    assert.equal(formatOpportunity(opportunity({ maxVolumeUSD: null, profitUSD: null })).profitUSD, null);
-    assert.equal(formatOpportunity(opportunity({ profitUSD: 0 })).profitUSD, '0.00');
+    assert.equal(formatOpportunity(opportunity({ maxVolumeUSD: null, profitUSD: null })).profit, null);
+    assert.equal(formatOpportunity(opportunity({ profitUSD: 0 })).profit, '$0,00');
 });
 
 for (const [columns, rows] of [[160, 24], [80, 15], [40, 8]]) {
@@ -69,8 +69,8 @@ for (const [columns, rows] of [[160, 24], [80, 15], [40, 8]]) {
         assert.equal(input[0].profitability, 1);
 
         if (rows === 24) {
-            assert.ok(writes[0].includes('35.00%'));
-            const dataRow = lines.find(line => /35\.00%/.test(line));
+            assert.ok(writes[0].includes('35,00%'));
+            const dataRow = lines.find(line => /35,00%/.test(line));
             assert.match(dataRow, /^\u2502 0 \u2502/);
 
             if (process.env.NO_COLOR === undefined)

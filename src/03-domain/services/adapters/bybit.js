@@ -1,3 +1,4 @@
+import OrderBookService from '../orderBookService.js';
 import { createHmac } from 'node:crypto';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
@@ -62,7 +63,7 @@ const bybitAdapter = {
         const messages = [];
 
         for (let index = 0; index < pairs.length; index += 10)
-            messages.push({ op: 'subscribe', args: pairs.slice(index, index + 10).map(pair => 'orderbook.1.' + pair.id) });
+            messages.push({ op: 'subscribe', args: pairs.slice(index, index + 10).map(pair => 'orderbook.50.' + pair.id) });
 
         return messages;
 
@@ -70,33 +71,34 @@ const bybitAdapter = {
 
     createParser(pairs) {
         const pairsMap = new Map(pairs.map(pair => [pair.id, pair]));
+        const books = new Map();
         return message => {
 
             if (message.success === false || (message.retCode !== undefined && message.retCode !== 0))
                 throw new Error(message.ret_msg || message.retMsg || 'Bybit subscription failed');
 
-            if (!message.topic?.startsWith('orderbook.1.'))
+            if (!message.topic?.startsWith('orderbook.50.'))
                 return [];
 
             const pair = pairsMap.get(message.data.s);
 
-            if (!pair || message.topic !== 'orderbook.1.' + pair.id)
+            if (!pair || message.topic !== 'orderbook.50.' + pair.id)
                 return [];
 
-            if (message.type !== 'snapshot')
-                throw new Error('Expected Bybit level 1 snapshot');
+            if (message.type === 'snapshot' || message.data.u === 1)
+                books.set(pair.id, new OrderBookService());
 
-            const bid = message.data.b[0];
-            const ask = message.data.a[0];
+            const book = books.get(pair.id);
 
-            return [new TickerData({
-                symbol: pair.symbol,
-                baseAsset: pair.baseAsset,
-                bidPrice: Number(bid?.[0] ?? 0),
-                bidQty: Number(bid?.[1] ?? 0),
-                askPrice: Number(ask?.[0] ?? 0),
-                askQty: Number(ask?.[1] ?? 0)
-            })];
+            if (!book)
+                throw new Error('Bybit update before snapshot');
+
+            book.apply([
+                ...message.data.b.map(([price, quantity]) => ({ side: 'bid', price_level: price, new_quantity: quantity })),
+                ...message.data.a.map(([price, quantity]) => ({ side: 'ask', price_level: price, new_quantity: quantity }))
+            ]);
+            book.trim(50);
+            return [new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset, ...book.getLevels() })];
         };
     },
 

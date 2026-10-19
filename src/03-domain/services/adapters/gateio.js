@@ -39,8 +39,8 @@ const gateioAdapter = {
     },
 
     subscriptions(pairs) {
-        return [{ time: Math.floor(Date.now() / 1000), channel: 'spot.book_ticker',
-            event: 'subscribe', payload: pairs.map(pair => pair.id) }];
+        return pairs.map(pair => ({ time: Math.floor(Date.now() / 1000), channel: 'spot.order_book',
+            event: 'subscribe', payload: [pair.id, '20', '100ms'] }));
     },
 
     createParser(pairs) {
@@ -50,7 +50,7 @@ const gateioAdapter = {
             if (message.error)
                 throw new Error(message.error.message || 'Gate.io subscription failed');
 
-            if (message.channel !== 'spot.book_ticker' || message.event !== 'update')
+            if (message.channel !== 'spot.order_book' || message.event !== 'update')
                 return [];
 
             const ticker = message.result;
@@ -62,10 +62,8 @@ const gateioAdapter = {
             return [new TickerData({
                 symbol: pair.symbol,
                 baseAsset: pair.baseAsset,
-                bidPrice: Number(ticker.b),
-                bidQty: Number(ticker.B),
-                askPrice: Number(ticker.a),
-                askQty: Number(ticker.A)
+                bids: ticker.bids,
+                asks: ticker.asks
             })];
         };
     },

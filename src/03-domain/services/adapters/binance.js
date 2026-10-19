@@ -49,9 +49,10 @@ const binanceAdapter = {
 
     subscriptions(pairs) {
         return [
+            { method: 'SET_PROPERTY', params: ['combined', true], id: 0 },
             {
                 method: 'SUBSCRIBE',
-                params: pairs.map(pair => `${pair.id.toLowerCase()}@bookTicker`),
+                params: pairs.map(pair => `${pair.id.toLowerCase()}@depth20@100ms`),
                 id: 1
             }
         ];
@@ -65,7 +66,8 @@ const binanceAdapter = {
                 throw new Error(message.msg);
 
             const ticker = message.data ?? message;
-            const pair = pairsMap.get(ticker.s);
+            const id = message.stream?.split('@')[0].toUpperCase();
+            const pair = pairsMap.get(id);
 
             if (!pair)
                 return [];
@@ -73,10 +75,8 @@ const binanceAdapter = {
             return [new TickerData({
                 symbol: pair.symbol,
                 baseAsset: pair.baseAsset,
-                bidPrice: Number(ticker.b),
-                bidQty: Number(ticker.B),
-                askPrice: Number(ticker.a),
-                askQty: Number(ticker.A)
+                bids: ticker.bids,
+                asks: ticker.asks
             })];
         };
     }

@@ -94,7 +94,7 @@ const coinbaseAdapter = {
                     throw new Error('Order book update received before snapshot');
 
                 book.apply(event.updates);
-                updates.push(new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset, ...book.getBestPrices() }));
+                updates.push(new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset, ...book.getLevels(50) }));
             }
             return updates;
         };

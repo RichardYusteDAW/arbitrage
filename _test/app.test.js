@@ -19,7 +19,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
         assert.deepEqual(rows.map(row => `${row.buy}->${row.sell}`).sort(),
             ['binance->coinbase', 'binance->kraken', 'bitfinex->kraken', 'bitstamp->kraken', 'bitvavo->kraken', 'bybit->kraken', 'coinbase->kraken', 'cryptocom->kraken', 'gateio->kraken', 'gemini->kraken', 'kucoin->kraken', 'okx->kraken']);
         assert.ok(rows.some(row => row.buy === 'binance' && row.sell === 'coinbase'
-            && row.maxVolumeUSD === '50.00' && row.profitUSD === '0.50' && row.profitability === '1.00%'));
+            && row.maxVolume === '$50,00' && row.profit === '$0,50' && row.quantity === '1' && row.profitability === '1,00%'));
         assert.equal(result.tables.at(-2).ESTADO.COINBASE, 'conectado');
         assert.equal(result.tables.at(-2).ESTADO.BINANCE, 'conectado');
         assert.equal(result.tables.at(-2).ESTADO.KRAKEN, 'conectado');

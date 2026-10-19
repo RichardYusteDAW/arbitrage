@@ -8,8 +8,8 @@ import { pair, ticker, createFakeSocket, flush } from './fixtures.js';
 const tokenResponse = token => ({ code: '200000', data: { token, instanceServers: [{
     endpoint: 'wss://example.com/ws', protocol: 'websocket', encrypt: true, pingInterval: 18000, pingTimeout: 10000
 }] } });
-const message = () => ({ type: 'message', topic: '/market/ticker:ETH-USDT', data: {
-    bestBid: '99', bestBidSize: '0.5', bestAsk: '100', bestAskSize: '0.75'
+const message = () => ({ type: 'message', topic: '/spotMarket/level2Depth50:ETH-USDT', data: {
+    bids: [['99', '0.5']], asks: [['100', '0.75']]
 } });
 
 test('KuCoin descubre solo pares habilitados y normaliza los símbolos', async () => {
@@ -37,16 +37,16 @@ test('KuCoin obtiene el token por POST y respeta el servidor y los tiempos recib
     await assert.rejects(kucoin.prepareConnection({}, async () => ({ code: '200000', data: { token: 'x', instanceServers: [] } })), /configuration/);
 });
 
-test('KuCoin suscribe ticker, normaliza BBO e ignora welcome, ack y pong', () => {
+test('KuCoin suscribe profundidad, normaliza niveles e ignora welcome, ack y pong', () => {
     const pairs = [pair('ETHUSDT', 'ETH', 'ETH-USDT')];
     const subscription = kucoin.subscriptions(pairs)[0];
-    assert.equal(subscription.topic, '/market/ticker:ETH-USDT');
+    assert.equal(subscription.topic, '/spotMarket/level2Depth50:ETH-USDT');
     assert.equal(subscription.privateChannel, false);
     assert.equal(subscription.response, true);
     const parse = kucoin.createParser(pairs);
     assert.deepEqual(parse(message()), [ticker({ bidQty: 0.5, askQty: 0.75 })]);
     for (const type of ['welcome', 'ack', 'pong']) assert.deepEqual(parse({ type }), []);
-    assert.deepEqual(parse({ ...message(), topic: '/market/ticker:UNKNOWN' }), []);
+    assert.deepEqual(parse({ ...message(), topic: '/spotMarket/level2Depth50:UNKNOWN' }), []);
     assert.throws(() => parse({ type: 'error', data: 'Invalid topic' }), /Invalid topic/);
 });
 

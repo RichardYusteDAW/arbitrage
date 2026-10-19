@@ -13,23 +13,62 @@ const calculateProfitability = (buyPrice, sellPrice) => {
     return null;
 };
 
-const calculateMaxVolume = (baseAsset, askQty, bidQty, market) => {
-    const maxQty = Math.min(
-        Number(askQty),
-        Number(bidQty)
-    );
+const matchOrderBooks = (buy, sell) => {
+    const asks = buy.asks ?? [[buy.askPrice, buy.askQty]];
+    const bids = sell.bids ?? [[sell.bidPrice, sell.bidQty]];
+    const valid = [...asks, ...bids].every(level => level.every(value => Number.isFinite(Number(value)) && Number(value) > 0));
 
-    if (!Number.isFinite(maxQty) || maxQty <= 0)
+    if (!valid)
         return null;
 
+    let askIndex = 0;
+    let bidIndex = 0;
+    let askRemaining = Number(asks[0]?.[1] ?? 0);
+    let bidRemaining = Number(bids[0]?.[1] ?? 0);
+    let quantity = 0;
+    let cost = 0;
+    let revenue = 0;
+
+    while (askIndex < asks.length && bidIndex < bids.length) {
+        const askPrice = Number(asks[askIndex][0]);
+        const bidPrice = Number(bids[bidIndex][0]);
+
+        if (bidPrice <= askPrice)
+            break;
+
+        const amount = Math.min(askRemaining, bidRemaining);
+        quantity += amount;
+        cost += amount * askPrice;
+        revenue += amount * bidPrice;
+        askRemaining -= amount;
+        bidRemaining -= amount;
+
+        if (askRemaining <= 0)
+            askRemaining = Number(asks[++askIndex]?.[1] ?? 0);
+
+        if (bidRemaining <= 0)
+            bidRemaining = Number(bids[++bidIndex]?.[1] ?? 0);
+    }
+
+    if (!(quantity > 0) || ![quantity, cost, revenue].every(Number.isFinite))
+        return null;
+
+    return { quantity, cost, revenue };
+};
+
+const getDollarRate = (ticker, baseAsset, market) => {
+    const quoteAsset = ticker.symbol.slice(baseAsset.length);
+
+    if (['USD', 'USDT', 'USDC'].includes(quoteAsset))
+        return 1;
+
     for (const quote of ['USD', 'USDT', 'USDC']) {
-        const ticker = market.get(baseAsset + quote);
+        const direct = market.get(quoteAsset + quote);
+        const base = market.get(baseAsset + quote);
+        const rate = direct ? Number(direct.askPrice) : base ? Number(base.askPrice) / Number(ticker.askPrice) : null;
 
-        if (!ticker)
-            continue;
-
-        const price = Number(ticker.askPrice);
-        return Number.isFinite(price) && price > 0 ? maxQty * price : null;
+        if (direct || base)
+            return Number.isFinite(rate) && rate > 0 ? rate : null;
     }
 
     return null;
@@ -48,19 +87,19 @@ const calculateOpportunity = (buyExchangeName, sellExchangeName, buyTickerData, 
     if (!(profitability > 0))
         return null;
 
-    const maxVolumeUSD = calculateMaxVolume(
-        buyTickerData.baseAsset ?? sellTickerData.baseAsset,
-        buyTickerData.askQty,
-        sellTickerData.bidQty,
-        buyTickers
-    );
+    const execution = matchOrderBooks(buyTickerData, sellTickerData);
+    const baseAsset = buyTickerData.baseAsset ?? sellTickerData.baseAsset;
+    const dollarRate = getDollarRate(buyTickerData, baseAsset, buyTickers);
+    const maxVolumeUSD = execution && dollarRate !== null ? execution.cost * dollarRate : null;
+    const profitUSD = execution && dollarRate !== null ? (execution.revenue - execution.cost) * dollarRate : null;
     return new Opportunity({
         symbol: buyTickerData.symbol,
         buy: buyExchangeName,
         sell: sellExchangeName,
-        profitability,
+        profitability: execution ? calculateProfitability(execution.cost, execution.revenue) : profitability,
+        quantity: execution?.quantity ?? null,
         maxVolumeUSD,
-        profitUSD: maxVolumeUSD === null ? null : maxVolumeUSD * profitability / 100
+        profitUSD
     });
 };
 

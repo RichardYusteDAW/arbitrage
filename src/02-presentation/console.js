@@ -3,18 +3,25 @@ import { Console } from 'node:console';
 import { Writable } from 'node:stream';
 import { TIMING } from '../config.js';
 
+const formatNumber = (value, decimals = 2) => value?.toLocaleString('es-ES', {
+    useGrouping: 'always',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+}) ?? null;
+
 const formatOpportunity = opportunity => ({
     symbol: opportunity.symbol,
     buy: opportunity.buy,
     sell: opportunity.sell,
-    profitability: opportunity.profitability.toFixed(2) + '%',
-    maxVolumeUSD: opportunity.maxVolumeUSD?.toFixed(2) ?? null,
-    profitUSD: opportunity.profitUSD?.toFixed(2) ?? null,
+    profitability: formatNumber(opportunity.profitability) + '%',
+    quantity: formatNumber(opportunity.quantity, 0),
+    maxVolume: opportunity.maxVolumeUSD == null ? null : '$' + formatNumber(opportunity.maxVolumeUSD),
+    profit: opportunity.profitUSD == null ? null : '$' + formatNumber(opportunity.profitUSD),
     withdraw: opportunity.withdraw ?? null,
     deposit: opportunity.deposit ?? null
 });
 
-const COLORS = { white: 37, blue: 34, green: 32, red: 31 };
+const COLORS = { white: 37, blue: 34, green: 32, red: 31, orange: '38;5;208' };
 
 const colorText = (value, color = 'white') => {
     if (!process.stdout.isTTY || process.env.NO_COLOR !== undefined)
@@ -82,7 +89,7 @@ const renderConsole = (opportunities, exchangeStatuses) => {
 
     for (const [name, status] of exchanges) {
         if (status.error)
-            output.log(name + ': ' + status.error);
+            output.log(colorText(name + ': ' + status.error, 'orange'));
     }
 
     const headerLines = frame.split('\n').length - 1;

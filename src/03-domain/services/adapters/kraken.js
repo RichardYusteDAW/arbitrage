@@ -1,3 +1,4 @@
+import OrderBookService from '../orderBookService.js';
 import { createHash, createHmac } from 'node:crypto';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import ASSET_EXCEPTIONS from '../../../01-common/assetExceptions.js';
@@ -93,9 +94,9 @@ const krakenAdapter = {
     subscriptions(pairs) {
         return [{
             method: 'subscribe', params: {
-                channel: 'ticker',
+                channel: 'book',
                 symbol: pairs.map(pair => pair.id),
-                event_trigger: 'bbo',
+                depth: 25,
                 snapshot: true
             }
         }];
@@ -103,26 +104,34 @@ const krakenAdapter = {
 
     createParser(pairs) {
         const pairsMap = new Map(pairs.map(pair => [pair.id, pair]));
+        const books = new Map();
         return message => {
 
             if (message.success === false)
                 throw new Error(message.error);
 
-            if (message.channel !== 'ticker')
+            if (message.channel !== 'book')
                 return [];
 
             return message.data.flatMap(ticker => {
                 const pair = pairsMap.get(ticker.symbol);
-                return pair ? [new TickerData(
-                    {
-                        symbol: pair.symbol,
-                        baseAsset: pair.baseAsset,
-                        bidPrice: Number(ticker.bid),
-                        bidQty: Number(ticker.bid_qty),
-                        askPrice: Number(ticker.ask),
-                        askQty: Number(ticker.ask_qty)
-                    }
-                )] : [];
+                if (!pair)
+                    return [];
+
+                if (message.type === 'snapshot')
+                    books.set(pair.id, new OrderBookService());
+
+                const book = books.get(pair.id);
+
+                if (!book)
+                    throw new Error('Kraken update before snapshot');
+
+                book.apply([
+                    ...(ticker.bids ?? []).map(level => ({ side: 'bid', price_level: level.price, new_quantity: level.qty })),
+                    ...(ticker.asks ?? []).map(level => ({ side: 'ask', price_level: level.price, new_quantity: level.qty }))
+                ]);
+                book.trim(25);
+                return [new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset, ...book.getLevels() })];
             });
         };
     },

@@ -5,8 +5,8 @@ import WebSocketConnectionService from '../src/03-domain/services/webSocketConne
 import { pair, ticker, createFakeSocket, flush } from './fixtures.js';
 import { TIMING } from '../src/config.js';
 
-const message = () => ({ channel: 'spot.book_ticker', event: 'update',
-    result: { s: 'ETH_USDT', b: '99', B: '0.5', a: '100', A: '0.75' } });
+const message = () => ({ channel: 'spot.order_book', event: 'update',
+    result: { s: 'ETH_USDT', bids: [['99', '0.5']], asks: [['100', '0.75']] } });
 
 test('Gate.io descubre pares tradable y excluye restricciones y premarket', async () => {
     const instrument = { id: 'ETH_USDT', base: 'ETH', quote: 'USDT', trade_status: 'tradable', type: 'normal' };
@@ -19,13 +19,13 @@ test('Gate.io descubre pares tradable y excluye restricciones y premarket', asyn
     await assert.rejects(gateio.discover({}, async () => ({ label: 'ERROR', message: 'Unavailable' })), /Unavailable/);
 });
 
-test('Gate.io suscribe book_ticker y normaliza BBO sin tratar confirmaciones como precios', t => {
+test('Gate.io suscribe order_book y normaliza niveles sin tratar confirmaciones como precios', t => {
     t.mock.timers.enable({ apis: ['Date'], now: 100000 });
     const pairs = [pair('ETHUSDT', 'ETH', 'ETH_USDT')];
-    assert.deepEqual(gateio.subscriptions(pairs), [{ time: 100, channel: 'spot.book_ticker', event: 'subscribe', payload: ['ETH_USDT'] }]);
+    assert.deepEqual(gateio.subscriptions(pairs), [{ time: 100, channel: 'spot.order_book', event: 'subscribe', payload: ['ETH_USDT', '20', '100ms'] }]);
     const parse = gateio.createParser(pairs);
     assert.deepEqual(parse(message()), [ticker({ bidQty: 0.5, askQty: 0.75 })]);
-    assert.deepEqual(parse({ channel: 'spot.book_ticker', event: 'subscribe', error: null, result: { status: 'success' } }), []);
+    assert.deepEqual(parse({ channel: 'spot.order_book', event: 'subscribe', error: null, result: { status: 'success' } }), []);
     assert.deepEqual(parse({ channel: 'spot.pong', result: null }), []);
     assert.deepEqual(parse({ ...message(), result: { ...message().result, s: 'UNKNOWN' } }), []);
     assert.throws(() => parse({ error: { code: 2, message: 'Invalid argument' } }), /Invalid argument/);

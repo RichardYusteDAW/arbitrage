@@ -11,7 +11,7 @@ const inputs = (buy = {}, sell = {}, conversions = [ticker()]) => ({
 
 test('calcula rentabilidad, volumen y beneficio sin redondear los datos internos', () => {
     const [result] = calculateOpportunities(inputs({ askPrice: '10', askQty: '2' }, { bidQty: '0.5' }));
-    assert.deepEqual(result, new Opportunity({ symbol: 'ETHBTC', buy: 'buyer', sell: 'seller', profitability: 10, maxVolumeUSD: 50, profitUSD: 5 }));
+    assert.deepEqual(result, new Opportunity({ symbol: 'ETHBTC', buy: 'buyer', sell: 'seller', profitability: 10, quantity: 0.5, maxVolumeUSD: 50, profitUSD: 5 }));
 });
 
 test('comprueba ambos sentidos y usa el precio USD del exchange de compra', () => {
@@ -107,4 +107,54 @@ test('si el par USD existe con precio inv?lido devuelve null como las otras conv
     const [result] = calculateOpportunities(inputs({}, {}, [ticker({ symbol: 'ETHUSD', askPrice: 0 }), ticker()]));
     assert.equal(result.maxVolumeUSD, null);
     assert.equal(result.profitUSD, null);
+});
+
+test('recorre ambos libros, agota niveles y se detiene antes del margen negativo', () => {
+    const data = {
+        buyer: [ticker({ asks: [[110, 10], [100, 2], [101, 3]] })],
+        seller: [ticker({ bids: [[99, 10], [104, 2], [102, 4], [105, 1]] })]
+    };
+    const before = structuredClone(data);
+    const result = calculateOpportunities(data).find(item => item.buy === 'buyer');
+    assert.equal(result.quantity, 5);
+    assert.equal(result.maxVolumeUSD, 503);
+    assert.equal(result.profitUSD, 14);
+    assert.equal(result.profitability, 14 / 503 * 100);
+    assert.deepEqual(structuredClone(data), before);
+});
+
+test('el volumen usa el coste real de todos los niveles y la rentabilidad sus precios medios', () => {
+    const [result] = calculateOpportunities({
+        buyer: [ticker({ asks: [[100, 2], [110, 3]] })],
+        seller: [ticker({ bids: [[120, 5]] })]
+    });
+    assert.equal(result.quantity, 5);
+    assert.equal(result.maxVolumeUSD, 530);
+    assert.equal(result.profitUSD, 70);
+    assert.equal(result.profitability, 70 / 530 * 100);
+});
+
+test('la cantidad queda limitada por el lado con menos liquidez rentable', () => {
+    const [result] = calculateOpportunities({
+        buyer: [ticker({ asks: [[100, 10]] })],
+        seller: [ticker({ bids: [[110, 1], [105, 2], [100, 20]] })]
+    });
+    assert.equal(result.quantity, 3);
+    assert.equal(result.maxVolumeUSD, 300);
+    assert.equal(result.profitUSD, 20);
+});
+
+test('la cantidad se calcula en EUR aunque falte la conversion a dolares', () => {
+    const data = {
+        buyer: [ticker({ symbol: 'ETHEUR', asks: [[100, 2], [110, 3]] })],
+        seller: [ticker({ symbol: 'ETHEUR', bids: [[120, 5]] })]
+    };
+    const [withoutConversion] = calculateOpportunities(data);
+    assert.equal(withoutConversion.quantity, 5);
+    assert.equal(withoutConversion.maxVolumeUSD, null);
+    assert.equal(withoutConversion.profitUSD, null);
+    data.buyer.push(ticker({ symbol: 'EURUSD', baseAsset: 'EUR', askPrice: 1.1, bidPrice: 1.09 }));
+    const [converted] = calculateOpportunities(data);
+    assert.ok(Math.abs(converted.maxVolumeUSD - 583) < 1e-10);
+    assert.ok(Math.abs(converted.profitUSD - 77) < 1e-10);
 });

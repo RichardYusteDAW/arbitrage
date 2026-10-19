@@ -39,18 +39,23 @@ test('Bitstamp distingue redes habilitadas, bloqueo global y datos desconocidos'
     await assert.rejects(bitstamp.getTransferStatuses(async () => ({})), /currencies/);
 });
 
-test('Bitvavo usa snapshots completos de ticker24h y cantidades del mejor precio', async () => {
+test('Bitvavo sincroniza snapshot, cambios pendientes y nonce y detecta saltos', async () => {
     const market = { market: 'ETH-EUR', status: 'trading', base: 'ETH', quote: 'EUR' };
     const pairs = await bitvavo.discover(EXCHANGES.bitvavo, async () => [market, { ...market, status: 'halted' }]);
     assert.deepEqual(pairs, [pair('ETHEUR', 'ETH', 'ETH-EUR')]);
-    assert.equal(bitvavo.subscriptions(pairs)[0].channels[0].name, 'ticker24h');
+    assert.equal(bitvavo.subscriptions(pairs)[0].channels[0].name, 'book');
+    assert.equal(bitvavo.subscriptions(pairs)[1].action, 'getBook');
     const parse = bitvavo.createParser(pairs);
     assert.deepEqual(parse({ event: 'subscribed' }), []);
-    const result = parse({ event: 'ticker24h', data: [{ market: 'ETH-EUR', bid: '100', bidSize: '2', ask: '101', askSize: '3', volume: '10000' }] })[0];
-    assert.equal(result.bidQty, 2);
+    assert.deepEqual(parse({ event: 'book', market: 'ETH-EUR', nonce: 11, bids: [['100', '4']], asks: [] }), []);
+    const result = parse({ action: 'getBook', response: { market: 'ETH-EUR', nonce: 10,
+        bids: [['100', '2']], asks: [['101', '3']] } })[0];
+    assert.equal(result.bidQty, 4);
     assert.equal(result.askQty, 3);
-    assert.equal(parse({ event: 'ticker24h', data: { market: 'ETH-EUR', bid: '100', bidSize: '2', ask: '101', askSize: '3' } })[0].askQty, 3);
-    assert.equal(parse({ event: 'ticker24h', data: [{ market: 'BTC-EUR' }] }).length, 0);
+    const updated = parse({ event: 'book', market: 'ETH-EUR', nonce: 12, bids: [], asks: [['101', '0'], ['102', '5']] })[0];
+    assert.equal(updated.askPrice, 102);
+    assert.equal(updated.askQty, 5);
+    assert.throws(() => parse({ event: 'book', market: 'ETH-EUR', nonce: 14, bids: [], asks: [] }), /sequence gap/);
     assert.throws(() => parse({ errorCode: 1, error: 'Denied' }), /Denied/);
     assert.deepEqual(bitvavo.heartbeat(), { action: 'getTime' });
     await assert.rejects(bitvavo.discover({}, async () => ({})), /discovery/);
@@ -71,9 +76,9 @@ test('Crypto.com excluye derivados, valores tokenizados y mercados no negociable
     const pairs = await cryptocom.discover(EXCHANGES.cryptocom, async () => ({ code: 0, result: { data: [market,
         { ...market, inst_type: 'PERPETUAL_SWAP' }, { ...market, tradable: false }, { ...market, product_type: 'EQUITIES' }] } }));
     assert.deepEqual(pairs, [pair('ETHUSDT', 'ETH', 'ETH_USDT')]);
-    assert.deepEqual(cryptocom.subscriptions(pairs)[0].params.channels, ['ticker.ETH_USDT']);
+    assert.deepEqual(cryptocom.subscriptions(pairs)[0].params.channels, ['book.ETH_USDT.50']);
     const parse = cryptocom.createParser(pairs);
-    const result = parse({ code: 0, result: { channel: 'ticker', instrument_name: 'ETH_USDT', data: [{ b: '100', bs: '2', k: '101', ks: '3', a: '999' }] } })[0];
+    const result = parse({ code: 0, result: { channel: 'book', instrument_name: 'ETH_USDT', data: [{ bids: [['100', '2']], asks: [['101', '3']] }] } })[0];
     assert.equal(result.askPrice, 101);
     assert.equal(result.bidQty, 2);
     assert.equal(result.askQty, 3);
@@ -86,9 +91,9 @@ test('Crypto.com excluye derivados, valores tokenizados y mercados no negociable
 test('Gemini separa cotizaciones largas, excluye perpetuals y usa el formato de suscripcion real', async () => {
     const pairs = await gemini.discover(EXCHANGES.gemini, async () => ['ethusdt', 'btcusd', 'ethgusd', 'ethrlusd', 'ethgusdperp', 'gemi-test-up', 'unknown']);
     assert.deepEqual(pairs.map(item => [item.symbol, item.baseAsset]), [['ETHUSDT', 'ETH'], ['BTCUSD', 'BTC'], ['ETHGUSD', 'ETH'], ['ETHRLUSD', 'ETH']]);
-    assert.deepEqual(gemini.subscriptions(pairs)[0].params, ['ethusdt@bookTicker', 'btcusd@bookTicker', 'ethgusd@bookTicker', 'ethrlusd@bookTicker']);
+    assert.deepEqual(gemini.subscriptions(pairs)[0].params, ['ethusdt@depth20@100ms', 'btcusd@depth20@100ms', 'ethgusd@depth20@100ms', 'ethrlusd@depth20@100ms']);
     const parse = gemini.createParser(pairs);
-    const result = parse({ s: 'ethusdt', b: '100', B: '2', a: '101', A: '3' })[0];
+    const result = parse({ symbol: 'ethusdt', bids: [['100', '2']], asks: [['101', '3']] })[0];
     assert.equal(result.symbol, 'ETHUSDT');
     assert.equal(result.askQty, 3);
     assert.deepEqual(parse({ id: 1, status: 200 }), []);
@@ -104,7 +109,7 @@ test('Bitfinex aplica el mapa oficial y excluye pares de prueba y valores', asyn
     assert.deepEqual(pairs.map(item => [item.id, item.symbol]), [
         ['tETHUST', 'ETHUSDT'], ['tDSHUSD', 'DASHUSD'], ['tWBTUSD', 'WBTCUSD'], ['tWHBT:USD', 'WBTUSD']
     ]);
-    assert.equal(bitfinex.subscriptions(pairs)[0].len, '1');
+    assert.equal(bitfinex.subscriptions(pairs)[0].len, '25');
     await assert.rejects(bitfinex.discover({}, async () => ['error', 1, 'Failed']), /discovery/);
 });
 
@@ -117,7 +122,7 @@ test('Bitfinex actualiza cada lado, elimina niveles y no conserva precios al rec
     const first = parse([7, [[100, 1, 2], [101, 1, -3]]])[0];
     assert.equal(first.bidQty, 2);
     assert.equal(first.askQty, 3);
-    assert.equal(parse([7, [102, 1, -4]])[0].askPrice, 102);
+    assert.equal(parse([7, [102, 1, -4]])[0].askPrice, 101);
     assert.equal(parse([7, [101, 0, -1]])[0].askPrice, 102);
     assert.equal(parse([7, [102, 0, -1]])[0].askQty, 0);
     assert.equal(parse([7, []])[0].bidQty, 0);

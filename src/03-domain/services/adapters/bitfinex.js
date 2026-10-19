@@ -1,3 +1,4 @@
+import OrderBookService from '../orderBookService.js';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
@@ -54,7 +55,7 @@ const bitfinexAdapter = {
     },
 
     subscriptions(pairs) {
-        return pairs.map(pair => ({ event: 'subscribe', channel: 'book', symbol: pair.id, prec: 'P0', freq: 'F0', len: '1' }));
+        return pairs.map(pair => ({ event: 'subscribe', channel: 'book', symbol: pair.id, prec: 'P0', freq: 'F0', len: '25' }));
     },
 
     createParser(pairs) {
@@ -68,7 +69,7 @@ const bitfinexAdapter = {
                 const pair = markets.get(message.symbol);
 
                 if (pair)
-                    channels.set(message.chanId, { pair, bid: [0, 0], ask: [0, 0], snapshot: false });
+                    channels.set(message.chanId, { pair, book: new OrderBookService(), snapshot: false });
             }
 
             if (!Array.isArray(message) || message[1] === 'hb')
@@ -85,23 +86,18 @@ const bitfinexAdapter = {
                 throw new Error('Bitfinex update before snapshot');
 
             if (snapshot) {
-                channel.bid = [0, 0];
-                channel.ask = [0, 0];
+                channel.book.reset();
                 channel.snapshot = true;
             }
 
-            for (const [price, count, amount] of snapshot ? message[1] : [message[1]]) {
-                const side = amount > 0 ? 'bid' : 'ask';
-
-                if (count > 0)
-                    channel[side] = [price, Math.abs(amount)];
-                else if (channel[side][0] === price)
-                    channel[side] = [0, 0];
-            }
-
+            const levels = snapshot ? message[1] : [message[1]];
+            channel.book.apply(levels.map(([price, count, amount]) => ({
+                side: amount > 0 ? 'bid' : 'ask', price_level: price,
+                new_quantity: count > 0 ? Math.abs(amount) : 0
+            })));
+            channel.book.trim(25);
             return [new TickerData({ symbol: channel.pair.symbol, baseAsset: channel.pair.baseAsset,
-                bidPrice: Number(channel.bid[0]), bidQty: Number(channel.bid[1]),
-                askPrice: Number(channel.ask[0]), askQty: Number(channel.ask[1]) })];
+                ...channel.book.getLevels() })];
         };
     },
 

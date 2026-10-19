@@ -36,7 +36,7 @@ const bitgetAdapter = {
     },
 
     subscriptions(pairs) {
-        return [{ op: 'subscribe', args: pairs.map(pair => ({ instType: 'spot', topic: 'ticker', symbol: pair.id })) }];
+        return [{ op: 'subscribe', args: pairs.map(pair => ({ instType: 'spot', topic: 'books5', symbol: pair.id })) }];
     },
 
     decodeMessage(text) {
@@ -51,7 +51,7 @@ const bitgetAdapter = {
             if (message.event === 'error' || (message.code !== undefined && message.code !== '00000'))
                 throw new Error(message.msg || 'Bitget subscription failed');
 
-            if (message.arg?.instType !== 'spot' || message.arg.topic !== 'ticker' || !message.data)
+            if (message.arg?.instType !== 'spot' || message.arg.topic !== 'books5' || !message.data)
                 return [];
 
             const pair = pairsMap.get(message.arg.symbol);
@@ -62,10 +62,8 @@ const bitgetAdapter = {
             return message.data.map(ticker => new TickerData({
                 symbol: pair.symbol,
                 baseAsset: pair.baseAsset,
-                bidPrice: Number(ticker.bid1Price),
-                bidQty: Number(ticker.bid1Size),
-                askPrice: Number(ticker.ask1Price),
-                askQty: Number(ticker.ask1Size)
+                bids: ticker.b,
+                asks: ticker.a
             }));
         };
     },

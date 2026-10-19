@@ -20,29 +20,29 @@ class Socket extends BaseSocket {
             if (this.closed) return;
             if (message.event === 'bts:subscribe') {
                 this.message({ event: 'data', channel: message.data.channel, data: { bids: [['100', '1']], asks: [['101', '2']] } });
-            } else if (message.action === 'subscribe') {
-                this.message({ event: 'ticker24h', data: [{ market: 'ETH-USDT', bid: '100', bidSize: '1', ask: '101', askSize: '2' }] });
+            } else if (message.action === 'getBook') {
+                this.message({ action: 'getBook', response: { market: message.market, nonce: 1, bids: [['100', '1']], asks: [['101', '2']] } });
             } else if (message.event === 'subscribe' && message.channel === 'book') {
                 this.message({ event: 'subscribed', channel: 'book', chanId: 1, symbol: message.symbol });
                 this.message([1, [[100, 1, 1], [101, 1, -2]]]);
             } else if (message.method === 'subscribe' && Array.isArray(message.params)) {
-                this.message({ s: 'ethusdt', b: '100', B: '1', a: '101', A: '2' });
+                this.message({ symbol: 'ethusdt', bids: [['100', '1']], asks: [['101', '2']] });
             } else if (message.method === 'subscribe' && message.params?.channels) {
-                this.message({ code: 0, result: { channel: 'ticker', instrument_name: 'ETH_USDT', data: [{ b: '100', bs: '1', k: '101', ks: '2' }] } });
-            } else if (message.channel === 'spot.book_ticker' && message.event === 'subscribe') {
-                this.message({ channel: 'spot.book_ticker', event: 'update', result: { s: 'ETH_USDT', b: '100', B: '1', a: '101', A: '2' } });
-            } else if (message.type === 'subscribe' && message.topic?.startsWith('/market/ticker:')) {
-                this.message({ type: 'message', topic: '/market/ticker:ETH-USDT', data: { bestBid: '100', bestBidSize: '1', bestAsk: '101', bestAskSize: '2' } });
+                this.message({ code: 0, result: { channel: 'book', instrument_name: 'ETH_USDT', data: [{ bids: [['100', '1']], asks: [['101', '2']] }] } });
+            } else if (message.channel === 'spot.order_book' && message.event === 'subscribe') {
+                this.message({ channel: 'spot.order_book', event: 'update', result: { s: 'ETH_USDT', bids: [['100', '1']], asks: [['101', '2']] } });
+            } else if (message.type === 'subscribe' && message.topic?.startsWith('/spotMarket/level2Depth50:')) {
+                this.message({ type: 'message', topic: '/spotMarket/level2Depth50:ETH-USDT', data: { bids: [['100', '1']], asks: [['101', '2']] } });
             } else if (message.op === 'subscribe' && typeof message.args[0] === 'string') {
-                this.message({ topic: 'orderbook.1.ETHUSDT', type: 'snapshot', data: { s: 'ETHUSDT', b: [['100', '1']], a: [['101', '2']] } });
-            } else if (message.op === 'subscribe' && message.args[0].topic === 'ticker') {
-                this.message({ arg: { instType: 'spot', topic: 'ticker', symbol: 'ETHUSDT' }, action: 'snapshot', data: [{ bid1Price: '100', bid1Size: '1', ask1Price: '101', ask1Size: '2' }] });
+                this.message({ topic: 'orderbook.50.ETHUSDT', type: 'snapshot', data: { s: 'ETHUSDT', b: [['100', '1']], a: [['101', '2']] } });
+            } else if (message.op === 'subscribe' && message.args[0].topic === 'books5') {
+                this.message({ arg: { instType: 'spot', topic: 'books5', symbol: 'ETHUSDT' }, action: 'snapshot', data: [{ b: [['100', '1']], a: [['101', '2']] }] });
             } else if (message.op === 'subscribe') {
-                this.message({ arg: { channel: 'tickers' }, data: [{ instId: 'ETH-USDT', bidPx: '100', bidSz: '1', askPx: '101', askSz: '2' }] });
+                this.message({ arg: { channel: 'books5' }, data: [{ instId: 'ETH-USDT', bids: [['100', '1']], asks: [['101', '2']] }] });
             } else if (message.method === 'SUBSCRIBE') {
-                this.message({ s: 'ETHUSDT', b: '99', B: '1', a: '100', A: '2' });
+                this.message({ stream: 'ethusdt@depth20@100ms', data: { bids: [['99', '1']], asks: [['100', '2']] } });
             } else if (message.method === 'subscribe') {
-                this.message({ channel: 'ticker', data: [{ symbol: 'ETH/USDT', bid: 103, bid_qty: 1, ask: 104, ask_qty: 2 }] });
+                this.message({ channel: 'book', type: 'snapshot', data: [{ symbol: 'ETH/USDT', bids: [{ price: 103, qty: 1 }], asks: [{ price: 104, qty: 2 }] }] });
             } else if (message.channel === 'heartbeats') {
                 this.message({ channel: 'subscriptions', sequence_num: 0 });
             } else if (message.channel === 'level2') {

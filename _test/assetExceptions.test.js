@@ -23,9 +23,9 @@ test('Kraken distingue las dos Terra conservando los identificadores de suscripc
     } }));
     assert.deepEqual(pairs, [pair('LUNCEUR', 'LUNC', 'LUNA/EUR'), pair('LUNAEUR', 'LUNA', 'LUNA2/EUR')]);
     assert.deepEqual(kraken.subscriptions(pairs)[0].params.symbol, ['LUNA/EUR', 'LUNA2/EUR']);
-    const quotes = kraken.createParser(pairs)({ channel: 'ticker', data: [
-        { symbol: 'LUNA/EUR', bid: 0.00004, bid_qty: 1000, ask: 0.00005, ask_qty: 1000 },
-        { symbol: 'LUNA2/EUR', bid: 0.04, bid_qty: 10, ask: 0.05, ask_qty: 10 }
+    const quotes = kraken.createParser(pairs)({ channel: 'book', type: 'snapshot', data: [
+        { symbol: 'LUNA/EUR', bids: [{ price: 0.00004, qty: 1000 }], asks: [{ price: 0.00005, qty: 1000 }] },
+        { symbol: 'LUNA2/EUR', bids: [{ price: 0.04, qty: 10 }], asks: [{ price: 0.05, qty: 10 }] }
     ] });
     assert.deepEqual(quotes.map(quote => [quote.symbol, quote.baseAsset]), [['LUNCEUR', 'LUNC'], ['LUNAEUR', 'LUNA']]);
     const selected = new PairSelectionService().selectPairs({ kraken: pairs, okx: [pair('LUNAEUR', 'LUNA', 'LUNA-EUR')] });

@@ -52,7 +52,7 @@ const kucoinAdapter = {
     subscriptions(pairs) {
         return pairs.length ? [{
             id: crypto.randomUUID(), type: 'subscribe',
-            topic: '/market/ticker:' + pairs.map(pair => pair.id).join(','), privateChannel: false, response: true
+            topic: '/spotMarket/level2Depth50:' + pairs.map(pair => pair.id).join(','), privateChannel: false, response: true
         }] : [];
     },
 
@@ -63,18 +63,17 @@ const kucoinAdapter = {
             if (message.type === 'error')
                 throw new Error(message.data || 'KuCoin subscription failed');
 
-            if (message.type !== 'message' || !message.topic?.startsWith('/market/ticker:'))
+            if (message.type !== 'message' || !message.topic?.startsWith('/spotMarket/level2Depth50:'))
                 return [];
 
-            const pair = pairsMap.get(message.topic.slice('/market/ticker:'.length));
+            const pair = pairsMap.get(message.topic.slice('/spotMarket/level2Depth50:'.length));
 
             if (!pair)
                 return [];
 
             return [new TickerData({
                 symbol: pair.symbol, baseAsset: pair.baseAsset,
-                bidPrice: Number(message.data.bestBid), bidQty: Number(message.data.bestBidSize),
-                askPrice: Number(message.data.bestAsk), askQty: Number(message.data.bestAskSize)
+                bids: message.data.bids, asks: message.data.asks
             })];
         };
     },

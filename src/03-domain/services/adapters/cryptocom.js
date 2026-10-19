@@ -22,7 +22,7 @@ const cryptocomAdapter = {
 
     subscriptions(pairs) {
         return [{ id: 1, method: 'subscribe', nonce: Date.now(),
-            params: { channels: pairs.map(pair => 'ticker.' + pair.id) } }];
+            params: { channels: pairs.map(pair => 'book.' + pair.id + '.50'), book_subscription_type: 'SNAPSHOT', book_update_frequency: '500' } }];
     },
 
     respondToMessage(message) {
@@ -36,7 +36,7 @@ const cryptocomAdapter = {
             if (message.code !== undefined && message.code !== 0)
                 throw new Error(message.message || 'Crypto.com subscription failed');
 
-            if (message.result?.channel !== 'ticker')
+            if (message.result?.channel !== 'book')
                 return [];
 
             const pair = markets.get(message.result.instrument_name);
@@ -45,8 +45,7 @@ const cryptocomAdapter = {
                 return [];
 
             return message.result.data.map(ticker => new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset,
-                bidPrice: Number(ticker.b), bidQty: Number(ticker.bs),
-                askPrice: Number(ticker.k), askQty: Number(ticker.ks) }));
+                bids: ticker.bids, asks: ticker.asks }));
         };
     }
 };

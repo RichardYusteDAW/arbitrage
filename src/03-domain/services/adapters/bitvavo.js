@@ -1,3 +1,4 @@
+import OrderBookService from '../orderBookService.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -31,25 +32,69 @@ const bitvavoAdapter = {
     },
 
     subscriptions(pairs) {
-        return [{ action: 'subscribe', channels: [{ name: 'ticker24h', markets: pairs.map(pair => pair.id) }] }];
+        return [
+            { action: 'subscribe', channels: [{ name: 'book', markets: pairs.map(pair => pair.id) }] },
+            ...pairs.map((pair, index) => ({ action: 'getBook', market: pair.id, depth: 1000, requestId: index + 1 }))
+        ];
     },
 
     createParser(pairs) {
         const markets = new Map(pairs.map(pair => [pair.id, pair]));
+        const states = new Map(pairs.map(pair => [pair.id, { book: null, nonce: null, pending: [] }]));
+        const apply = (state, update) => {
+            if (update.nonce <= state.nonce)
+                return;
+
+            if (update.nonce !== state.nonce + 1)
+                throw new Error('Bitvavo order book sequence gap');
+
+            state.book.apply([
+                ...update.bids.map(([price, quantity]) => ({ side: 'bid', price_level: price, new_quantity: quantity })),
+                ...update.asks.map(([price, quantity]) => ({ side: 'ask', price_level: price, new_quantity: quantity }))
+            ]);
+            state.nonce = update.nonce;
+        };
         return message => {
             if (message.errorCode !== undefined || message.error)
                 throw new Error(message.error || 'Bitvavo subscription failed');
 
-            if (message.event !== 'ticker24h')
+            const snapshot = message.action === 'getBook';
+
+            if (!snapshot && message.event !== 'book')
                 return [];
 
-            const tickers = Array.isArray(message.data) ? message.data : [message.data];
-            return tickers.flatMap(ticker => {
-                const pair = markets.get(ticker.market);
-                return pair ? [new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset,
-                    bidPrice: Number(ticker.bid), bidQty: Number(ticker.bidSize),
-                    askPrice: Number(ticker.ask), askQty: Number(ticker.askSize) })] : [];
-            });
+            const update = snapshot ? message.response : message;
+            const pair = markets.get(update?.market);
+
+            if (!pair)
+                return [];
+
+            const state = states.get(pair.id);
+
+            if (snapshot) {
+                state.book = new OrderBookService();
+                state.book.apply([
+                    ...update.bids.map(([price, quantity]) => ({ side: 'bid', price_level: price, new_quantity: quantity })),
+                    ...update.asks.map(([price, quantity]) => ({ side: 'ask', price_level: price, new_quantity: quantity }))
+                ]);
+                state.nonce = update.nonce;
+
+                for (const pending of state.pending)
+                    apply(state, pending);
+
+                state.pending = [];
+            } else if (!state.book) {
+                state.pending.push(update);
+
+                if (state.pending.length > 1000)
+                    throw new Error('Bitvavo order book snapshot timeout');
+
+                return [];
+            } else {
+                apply(state, update);
+            }
+
+            return [new TickerData({ symbol: pair.symbol, baseAsset: pair.baseAsset, ...state.book.getLevels(50) })];
         };
     },
 

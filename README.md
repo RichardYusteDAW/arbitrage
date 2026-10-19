@@ -12,12 +12,12 @@ La terminal muestra el estado de cada exchange desde el arranque y refresca la t
 ## Datos
 
 - REST se utiliza para descubrir los pares activos. Los precios y cantidades llegan por WebSocket.
-- Gate.io utiliza `spot.book_ticker` con precios y cantidades BBO, grupos de 100 pares y heartbeat `spot.ping`.
-- KuCoin utiliza `/market/ticker`, grupos de 100 pares y un token p?blico renovado antes de cada conexi?n; el servidor establece los tiempos de heartbeat.
-- Bitget v3 utiliza `ticker` spot con precios y cantidades BBO, grupos de 100 pares y heartbeat de texto `ping`/`pong`.
-- Bybit utiliza `orderbook.1` para spot, heartbeat cada 20 segundos, grupos de 100 pares y mensajes de suscripci?n de hasta 10 pares.
-- OKX utiliza el canal p?blico `tickers`, con heartbeat de texto `ping`/`pong` y grupos de 100 pares.
-- Binance utiliza `bookTicker`; Kraken v2, `ticker` con `event_trigger: bbo`; Coinbase, `level2` y `heartbeats`.
+- Gate.io utiliza snapshots spot.order_book de 20 niveles por lado y heartbeat spot.ping.
+- KuCoin utiliza /spotMarket/level2Depth50, grupos de 100 pares y token renovado antes de cada conexión; recibe snapshots de 50 niveles.
+- Bitget v3 utiliza books5 spot, con snapshots de cinco niveles y heartbeat de texto ping/pong.
+- Bybit utiliza orderbook.50 para spot, con snapshot inicial y cambios incrementales. Heartbeat cada 20 segundos y suscripciones de hasta 10 pares por mensaje.
+- OKX utiliza books5 con snapshots de cinco niveles, heartbeat ping/pong y grupos de 100 pares.
+- Binance utiliza profundidad parcial combinada depth20@100ms; Kraken, book de 25 niveles; Coinbase, level2 y heartbeats, conservando los primeros 50 niveles para los cálculos.
 - Se suscriben los pares compartidos entre exchanges y sus pares de conversión a USDT/USDC.
 - Coinbase conserva el libro completo en memoria, aplica las cantidades absolutas y elimina niveles con cantidad cero. Un salto de secuencia provoca reconexión y una nueva instantánea.
 - Las conexiones se reparten en grupos según `maxPairsPerConnection`. Se reconectan automáticamente con una espera creciente de hasta 30 segundos.
@@ -42,7 +42,7 @@ La configuración de los exchanges está en `src/config.js` y todos los tiempos,
 - `src/03-domain/services/orderBookService.js`: aplicación de actualizaciones y consulta del mejor bid/ask.
 - `src/03-domain/services/adapters/`: interpretación de los mensajes de cada exchange.
 
-Las fórmulas de `src/03-domain/helpers/calculations.js` no se han cambiado: rentabilidad bruta sin comisiones y conversión USDT primero, USDC después; sin ninguno se devuelve `null`. USDT y USDC se consideran equivalentes a USD. El emparejamiento sigue utilizando los símbolos normalizados, sin resolver identidades de tokens que comparten ticker.
+Los cálculos recorren los asks de compra y los bids de venta hasta que el siguiente tramo deja de ser rentable. QUANTITY es la cantidad de activo base; MAXVOLUME, su coste total; PROFIT, ingreso total menos coste. PROFITABILITY se calcula con esos totales, sin comisiones ni costes de transferencia. Los importes en dólares llevan $. USD, USDT y USDC se consideran equivalentes; para otras cotizaciones se busca conversión a USD, USDT o USDC en ese orden. Sin conversión, los importes son null pero se conserva la cantidad. El volumen se limita a los niveles recibidos, no a toda la liquidez del exchange.
 
 ## Modelos compartidos
 
@@ -89,12 +89,12 @@ La configuración incorpora Bitstamp, Bitvavo, Crypto.com (cryptocom), Gemini y 
 | Exchange | Datos de mercado | Depósitos y retiradas |
 |---|---|---|
 | Bitstamp | Snapshots de order_book; solo mercados SPOT habilitados | API pública currencies, por red |
-| Bitvavo | ticker24h completo cada segundo, con cantidades del mejor bid/ask | API pública assets |
-| Crypto.com | ticker por instrumento; solo CCY_PAIR de criptomonedas negociables | null hasta incorporar una fuente de disponibilidad |
-| Gemini | bookTicker sobre ws.gemini.com; se excluyen perpetuals y contratos de eventos | null hasta incorporar una fuente de disponibilidad |
-| Bitfinex | book P0/F0 de un nivel por lado; se excluyen pruebas, derivados y valores | Configuración pública de métodos y estado de wallets |
+| Bitvavo | book incremental con snapshot inicial getBook y comprobación de nonce; se conservan 50 niveles | API pública assets |
+| Crypto.com | book de 50 niveles en snapshots cada 500 ms; solo CCY_PAIR de criptomonedas negociables | null hasta incorporar una fuente de disponibilidad |
+| Gemini | depth20@100ms sobre ws.gemini.com; se excluyen perpetuals y contratos de eventos | null hasta incorporar una fuente de disponibilidad |
+| Bitfinex | book P0/F0 de 25 niveles por lado; se excluyen pruebas, derivados y valores | Configuración pública de métodos y estado de wallets |
 
-Bitfinex conserva los identificadores nativos para las suscripciones y utiliza su mapa oficial de monedas para comparar, por ejemplo UST como USDT y DSH como DASH. Su ticker no se usa para calcular volumen porque suma cantidades de varios niveles. El libro de un nivel permite tomar solo la cantidad del mejor precio.
+Bitfinex conserva los identificadores nativos para las suscripciones y utiliza su mapa oficial de monedas para comparar, por ejemplo UST como USDT y DSH como DASH. Su ticker no se usa para calcular volumen porque suma cantidades de varios niveles. El libro de 25 niveles permite calcular el coste y el ingreso de cada tramo.
 
 Crypto.com espera un segundo antes de suscribirse y responde al heartbeat del servidor con el mismo id. El servicio WebSocket cancela esa suscripción pendiente al detenerse o desconectarse. Bitvavo y Gemini envían sus mensajes públicos de mantenimiento de conexión; Bitfinex utiliza ping.
 

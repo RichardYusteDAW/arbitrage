@@ -74,7 +74,7 @@ const okxAdapter = {
     },
 
     subscriptions(pairs) {
-        return [{ op: 'subscribe', args: pairs.map(pair => ({ channel: 'tickers', instId: pair.id })) }];
+        return [{ op: 'subscribe', args: pairs.map(pair => ({ channel: 'books5', instId: pair.id })) }];
     },
 
     decodeMessage(text) {
@@ -88,7 +88,7 @@ const okxAdapter = {
             if (message.event === 'error' || (message.code !== undefined && message.code !== '0'))
                 throw new Error(message.msg || 'OKX subscription failed');
 
-            if (message.arg?.channel !== 'tickers' || !message.data)
+            if (message.arg?.channel !== 'books5' || !message.data)
                 return [];
 
             return message.data.flatMap(ticker => {
@@ -96,10 +96,8 @@ const okxAdapter = {
                 return pair ? [new TickerData({
                     symbol: pair.symbol,
                     baseAsset: pair.baseAsset,
-                    bidPrice: Number(ticker.bidPx),
-                    bidQty: Number(ticker.bidSz),
-                    askPrice: Number(ticker.askPx),
-                    askQty: Number(ticker.askSz)
+                    bids: ticker.bids,
+                    asks: ticker.asks
                 })] : [];
             });
         };

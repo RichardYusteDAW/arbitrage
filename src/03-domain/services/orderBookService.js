@@ -44,6 +44,19 @@ class OrderBookService {
             askQty: this.asks.get(askPrice) ?? 0
         };
     }
+
+    getLevels(depth = Infinity) {
+        return {
+            bids: [...this.bids].sort((a, b) => b[0] - a[0]).slice(0, depth),
+            asks: [...this.asks].sort((a, b) => a[0] - b[0]).slice(0, depth)
+        };
+    }
+
+    trim(depth) {
+        const { bids, asks } = this.getLevels(depth);
+        this.bids = new Map(bids);
+        this.asks = new Map(asks);
+    }
 }
 
 export default OrderBookService;

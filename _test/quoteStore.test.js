@@ -41,3 +41,15 @@ test('caducidad en el límite, retirada por grupo y limpieza completa', t => {
     store.clear();
     assert.deepEqual(store.getData(), { a: [], b: [] });
 });
+
+test('los libros guardados son copias y no cambian al actualizar el siguiente snapshot', () => {
+    const store = new QuoteStoreService(['a']);
+    const input = ticker({ bids: [[99, 1], [98, 2]], asks: [[100, 3], [101, 4]] });
+    store.update('a', [input]);
+    const first = store.getData().a[0];
+    input.asks[0][1] = 999;
+    assert.equal(first.asks[0][1], 3);
+    store.update('a', [ticker({ asks: [[100, 5], [101, 6]] })]);
+    assert.equal(first.asks[0][1], 3);
+    assert.equal(store.getData().a[0].asks[0][1], 5);
+});

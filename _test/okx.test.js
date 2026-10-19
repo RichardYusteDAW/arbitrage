@@ -16,13 +16,13 @@ test('OKX descubre spot activos, normaliza símbolos y rechaza errores REST', as
     await assert.rejects(okx.discover({}, async () => ({ code: '50000', msg: 'Unavailable' })), /Unavailable/);
 });
 
-test('OKX suscribe tickers, normaliza BBO y propaga errores de suscripción', () => {
+test('OKX suscribe books5, normaliza niveles y propaga errores de suscripción', () => {
     const pairs = [pair('ETHUSDT', 'ETH', 'ETH-USDT')];
-    assert.deepEqual(okx.subscriptions(pairs), [{ op: 'subscribe', args: [{ channel: 'tickers', instId: 'ETH-USDT' }] }]);
+    assert.deepEqual(okx.subscriptions(pairs), [{ op: 'subscribe', args: [{ channel: 'books5', instId: 'ETH-USDT' }] }]);
     const parse = okx.createParser(pairs);
-    assert.deepEqual(parse({ event: 'subscribe', arg: { channel: 'tickers' } }), []);
-    assert.deepEqual(parse({ arg: { channel: 'tickers' }, data: [
-        { instId: 'ETH-USDT', bidPx: '99', bidSz: '0.5', askPx: '100', askSz: '0.75' }, { instId: 'UNKNOWN' }
+    assert.deepEqual(parse({ event: 'subscribe', arg: { channel: 'books5' } }), []);
+    assert.deepEqual(parse({ arg: { channel: 'books5' }, data: [
+        { instId: 'ETH-USDT', bids: [['99', '0.5']], asks: [['100', '0.75']] }, { instId: 'UNKNOWN' }
     ] }), [ticker({ bidQty: 0.5, askQty: 0.75 })]);
     assert.throws(() => parse({ event: 'error', code: '60012', msg: 'Invalid subscription' }), /Invalid subscription/);
     assert.throws(() => okx.decodeMessage('{bad'), SyntaxError);
@@ -46,7 +46,7 @@ test('OKX envía ping como texto, procesa pong y conserva las cotizaciones', asy
     t.mock.timers.tick(0);
     await flush();
     const socket = Socket.instances[0];
-    socket.message({ arg: { channel: 'tickers' }, data: [{ instId: 'ETH-USDT', bidPx: '99', bidSz: '1', askPx: '100', askSz: '2' }] });
+    socket.message({ arg: { channel: 'books5' }, data: [{ instId: 'ETH-USDT', bids: [['99', '1']], asks: [['100', '2']] }] });
     for (let index = 0; index < 3; index++) {
         t.mock.timers.tick(TIMING.heartbeatInterval);
         socket.raw('pong');
@@ -65,7 +65,7 @@ test('OKX excluye acciones tokenizadas aunque compartan s?mbolo con una criptomo
     ] }));
     assert.deepEqual(discovered, [pair('ETHUSDT', 'ETH', 'ETH-USDT')]);
     const parse = okx.createParser(discovered);
-    assert.deepEqual(parse({ arg: { channel: 'tickers' }, data: [
-        { instId: 'XTER-USDT', bidPx: '337', bidSz: '3', askPx: '338', askSz: '3' }
+    assert.deepEqual(parse({ arg: { channel: 'books5' }, data: [
+        { instId: 'XTER-USDT', bids: [['337', '3']], asks: [['338', '3']] }
     ] }), []);
 });

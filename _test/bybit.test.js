@@ -5,7 +5,7 @@ import WebSocketConnectionService from '../src/03-domain/services/webSocketConne
 import { pair, ticker, createFakeSocket, flush } from './fixtures.js';
 import { TIMING } from '../src/config.js';
 
-const snapshot = (changes = {}) => ({ topic: 'orderbook.1.ETHUSDT', type: 'snapshot',
+const snapshot = (changes = {}) => ({ topic: 'orderbook.50.ETHUSDT', type: 'snapshot',
     data: { s: 'ETHUSDT', b: [['99', '0.5']], a: [['100', '0.75']], ...changes } });
 
 test('Bybit descubre solo pares Trading y propaga errores REST', async () => {
@@ -23,7 +23,7 @@ test('Bybit suscribe todos los pares en mensajes de hasta 10 argumentos', () => 
     const messages = bybit.subscriptions(pairs);
     assert.equal(messages.length, 10);
     assert.ok(messages.every(message => message.op === 'subscribe' && message.args.length === 10));
-    assert.deepEqual(messages.flatMap(message => message.args), pairs.map(pair => 'orderbook.1.' + pair.id));
+    assert.deepEqual(messages.flatMap(message => message.args), pairs.map(pair => 'orderbook.50.' + pair.id));
     assert.deepEqual(bybit.subscriptions(pairs.slice(0, 11)).map(message => message.args.length), [10, 1]);
     assert.deepEqual(bybit.subscriptions([]), []);
 });
@@ -31,13 +31,13 @@ test('Bybit suscribe todos los pares en mensajes de hasta 10 argumentos', () => 
 test('Bybit normaliza snapshots, reemplaza lados vacíos e ignora confirmaciones y pong', () => {
     const parse = bybit.createParser([pair()]);
     assert.deepEqual(parse(snapshot()), [ticker({ bidQty: 0.5, askQty: 0.75 })]);
-    assert.deepEqual(parse(snapshot({ b: [], a: [] })), [ticker({ bidPrice: 0, bidQty: 0, askPrice: 0, askQty: 0 })]);
+    assert.deepEqual(parse(snapshot({ b: [], a: [] })), [ticker({ bids: [], asks: [] })]);
     assert.deepEqual(parse(snapshot({ s: 'UNKNOWN' })), []);
     assert.deepEqual(parse({ op: 'subscribe', success: true }), []);
     assert.deepEqual(parse({ op: 'ping', success: true, ret_msg: 'pong' }), []);
-    assert.deepEqual(parse({ topic: 'orderbook.50.ETHUSDT' }), []);
+    assert.deepEqual(parse({ topic: 'orderbook.1.ETHUSDT' }), []);
     assert.throws(() => parse({ op: 'subscribe', success: false, ret_msg: 'Denied' }), /Denied/);
-    assert.throws(() => parse({ ...snapshot(), type: 'delta' }), /snapshot/);
+    assert.throws(() => bybit.createParser([pair()])({ ...snapshot(), type: 'delta' }), /snapshot/);
 });
 
 test('Bybit mantiene la conexión con ping y pong y entrega snapshots', async t => {
