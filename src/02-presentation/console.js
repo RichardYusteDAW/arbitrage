@@ -1,4 +1,6 @@
 import { inspect } from 'node:util';
+import { Console } from 'node:console';
+import { Writable } from 'node:stream';
 import { TIMING } from '../config.js';
 
 const formatOpportunity = opportunity => ({
@@ -12,37 +14,107 @@ const formatOpportunity = opportunity => ({
     deposit: opportunity.deposit ?? null
 });
 
-const colorAvailability = value => {
-    if (typeof value !== 'boolean' || !process.stdout.isTTY || process.env.NO_COLOR !== undefined)
+const COLORS = { white: 37, blue: 34, green: 32, red: 31 };
+
+const colorText = (value, color = 'white') => {
+    if (!process.stdout.isTTY || process.env.NO_COLOR !== undefined)
+        return String(value);
+
+    return '\x1b[' + COLORS[color] + 'm' + value + '\x1b[37m';
+};
+
+const tableText = (value, color = 'white') => {
+    if (!process.stdout.isTTY)
         return value;
 
-    return {
-        [inspect.custom]: () => `\x1b[${value ? 34 : 31}m${value}\x1b[0m`
-    };
+    return { [inspect.custom]: () => colorText(value, color) };
+};
+
+const fitLine = (line, columns) => {
+    const tokens = line.match(/\x1b\[[0-9;]*m|[^]/gu) ?? [];
+    let width = 0;
+    let result = '';
+
+    for (const token of tokens) {
+        if (!token.startsWith('\x1b') && ++width > columns - 1)
+            break;
+
+        result += token;
+    }
+
+    return result + '\x1b[0m';
 };
 
 const renderConsole = (opportunities, exchangeStatuses) => {
+    console.clear();
+
     const sortedOpportunities = [...opportunities].sort((a, b) => b.profitability - a.profitability);
 
-    if (process.stdout.isTTY)
-        process.stdout.write('\x1b[H\x1b[2J');
+    const interactive = process.stdout.isTTY;
 
-    console.log(`Arbitraje | ${new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' })} | refresco: ${TIMING.renderInterval / 1000} s`);
+    if (!interactive)
+        process.stdout.write('\x1b[3J\x1b[2J\x1b[H');
+    const columns = process.stdout.columns || 120;
+    const height = process.stdout.rows || 40;
+    let frame = '';
+    const output = interactive ? new Console({
+        colorMode: false,
+        stdout: new Writable({
+            write(chunk, encoding, callback) {
+                frame += chunk.toString();
+                callback();
+            }
+        })
+    }) : console;
 
-    for (const [exchangeName, status] of Object.entries(exchangeStatuses)) {
-        console.log(`${exchangeName}: ${status.state} | conexiones ${status.connections}/${status.totalConnections} | pares con datos ${status.quotes}${status.error ? ` | ${status.error}` : ''}`);
+    output.log(`Arbitraje | ${new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' })} | refresco: ${TIMING.renderInterval / 1000} s`);
+    output.log(colorText('OPORTUNIDADES:', 'blue') + ' ' + opportunities.length);
+
+    const exchanges = Object.entries(exchangeStatuses);
+
+    if (exchanges.length) {
+        output.table({
+            ESTADO: Object.fromEntries(exchanges.map(([name, status]) => [name.toUpperCase(), tableText(status.state, status.state === 'conectado' ? 'green' : 'red')])),
+            CONEXIONES: Object.fromEntries(exchanges.map(([name, status]) => [name.toUpperCase(), tableText(status.connections + '/' + status.totalConnections)])),
+            PARES: Object.fromEntries(exchanges.map(([name, status]) => [name.toUpperCase(), status.quotes]))
+        });
     }
 
-    console.log(`Oportunidades: ${opportunities.length} | rentabilidad bruta, sin comisiones | USDT/USDC = USD | withdraw: salida en compra | deposit: entrada en venta | alguna red; null = desconocido`);
-    console.table(sortedOpportunities.slice(0, 32).map(opportunity => {
-        const row = formatOpportunity(opportunity);
+    for (const [name, status] of exchanges) {
+        if (status.error)
+            output.log(name + ': ' + status.error);
+    }
 
-        return {
-            ...row,
-            withdraw: colorAvailability(row.withdraw),
-            deposit: colorAvailability(row.deposit)
-        };
-    }));
+    const headerLines = frame.split('\n').length - 1;
+    const rowLimit = interactive ? Math.max(0, height - headerLines - 5) : 32;
+
+    const opportunityRows = sortedOpportunities.slice(0, rowLimit).map(opportunity =>
+        Object.fromEntries(Object.entries(formatOpportunity(opportunity)).map(([name, value]) => {
+            const availability = name === 'withdraw' || name === 'deposit';
+            const color = availability ? (value === true ? 'green' : 'red') : 'white';
+            return [interactive ? name.toUpperCase() : name, tableText(value, color)];
+        })));
+    output.table(opportunityRows);
+
+    if (interactive) {
+        const lines = frame.trimEnd().split('\n').slice(0, Math.max(0, height - 1));
+        const visible = lines.map((line, index) => {
+            const header = /^\S\s+\(index\)/.test(line);
+            let label = header ? line.replace('(index)', '       ') : line;
+
+            if (index >= headerLines) {
+                const indexWidth = String(Math.max(0, opportunityRows.length - 1)).length;
+                label = label
+                    .replace(/^([\u250c\u251c\u2514])\u2500+(?=[\u252c\u253c\u2534])/, (_, corner) => corner + '\u2500'.repeat(indexWidth + 2))
+                    .replace(/^\u2502([^\u2502]*)\u2502/, (_, cell) => '\u2502 ' + cell.trim().padEnd(indexWidth) + ' \u2502');
+            }
+            const text = header
+                ? label.replace(/[^\s\u2502]+/gu, value => colorText(value, 'blue'))
+                : label;
+            return fitLine(colorText(text), columns);
+        });
+        process.stdout.write(visible.map(line => line + '\x1b[K').join('\n') + '\x1b[J');
+    }
 };
 
 export { renderConsole, formatOpportunity };

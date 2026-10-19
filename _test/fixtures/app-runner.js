@@ -107,6 +107,9 @@ globalThis.setInterval = (callback, delay) => {
     return id;
 };
 globalThis.clearInterval = id => intervals.delete(id);
+const writeOutput = process.stdout.write.bind(process.stdout);
+const screenClears = [];
+process.stdout.write = text => { screenClears.push(text); return true; };
 const logs = [];
 const tables = [];
 console.log = (...values) => logs.push(values.join(' '));
@@ -122,5 +125,5 @@ await new Promise(resolve => setTimeout(resolve, 0));
 const render = [...intervals.values()].find(interval => interval.delay === 1000);
 render.callback();
 process.emit(process.env.TEST_STOP_SIGNAL ?? 'SIGINT');
-process.stdout.write(JSON.stringify({ logs, tables, requested,
+writeOutput(JSON.stringify({ logs, tables, requested, screenClears,
     closed: Socket.instances.every(socket => socket.closed), activeIntervals: intervals.size }));
