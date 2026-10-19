@@ -1,4 +1,4 @@
-class WithdrawalStatusService {
+class TransferStatusService {
     #statuses = new Map();
 
     constructor(maxAge) {
@@ -8,17 +8,17 @@ class WithdrawalStatusService {
     update(exchange, statuses) {
         this.#statuses.set(exchange, {
             receivedAt: Date.now(),
-            assets: new Map(statuses.map(({ asset, withdraw }) => [asset, withdraw]))
+            assets: new Map(statuses.map(({ asset, withdraw, deposit }) => [asset, { withdraw, deposit }]))
         });
     }
 
-    get(exchange, asset) {
+    get(exchange, asset, direction = 'withdraw') {
         const snapshot = this.#statuses.get(exchange);
 
         if (!snapshot || Date.now() - snapshot.receivedAt > this.maxAge)
             return null;
 
-        const status = snapshot.assets.get(asset);
+        const status = snapshot.assets.get(asset)?.[direction];
         return typeof status === 'boolean' ? status : null;
     }
 
@@ -30,4 +30,4 @@ class WithdrawalStatusService {
     }
 }
 
-export default WithdrawalStatusService;
+export default TransferStatusService;

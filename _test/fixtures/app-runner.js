@@ -51,10 +51,10 @@ globalThis.fetch = async (input, options) => {
         data = { serverTime: Date.now() };
     } else if (url.hostname === 'api.binance.com' && url.pathname.endsWith('/capital/config/getall')) {
         if (options.headers['X-MBX-APIKEY'] !== 'test-binance-key') throw new Error('Missing test API key');
-        data = [{ coin: 'ETH', withdrawAllEnable: true, networkList: [{ withdrawEnable: true }] }];
+        data = [{ coin: 'ETH', withdrawAllEnable: true, networkList: [{ withdrawEnable: true, depositEnable: true }] }];
     } else if (url.hostname === 'api.binance.com' && url.pathname.endsWith('exchangeInfo')) {
         data = { symbols: [{ symbol: 'ETHUSDT', baseAsset: 'ETH', status: 'TRADING' }] };
-    } else if (url.hostname === 'api.kraken.com' && url.pathname === '/funding/v1/assets/withdraw') {
+    } else if (url.hostname === 'api.kraken.com' && ['/funding/v1/assets/withdraw', '/funding/v1/assets/deposit'].includes(url.pathname)) {
         if (options.headers['API-Key'] !== 'test-kraken-key') throw new Error('Missing Kraken test key');
         data = { currency: [{ name: 'ETH' }] };
     } else if (url.hostname === 'api.kraken.com' && url.pathname.endsWith('/Assets')) {
@@ -68,14 +68,14 @@ globalThis.fetch = async (input, options) => {
     } else if (url.hostname === 'www.okx.com' && url.pathname.endsWith('/asset/currencies')) {
         if (options.headers['OK-ACCESS-KEY'] !== 'test-okx-key') throw new Error('Missing OKX test key');
         if (options.headers['OK-ACCESS-PASSPHRASE'] !== 'test-okx-passphrase') throw new Error('Missing OKX test passphrase');
-        data = { code: '0', data: [{ ccy: 'ETH', chain: 'ETH-Ethereum', canWd: true }] };
+        data = { code: '0', data: [{ ccy: 'ETH', chain: 'ETH-Ethereum', canWd: true, canDep: true }] };
     } else if (url.hostname === 'www.okx.com' && url.pathname.endsWith('/instruments')) {
         data = { code: '0', data: [{ instType: 'SPOT', state: 'live', instId: 'ETH-USDT', baseCcy: 'ETH', quoteCcy: 'USDT' }] };
     } else if (url.hostname === 'api.bybit.com' && url.pathname.endsWith('/market/time')) {
         data = { retCode: 0, time: Date.now() };
     } else if (url.hostname === 'api.bybit.com' && url.pathname.endsWith('/coin/query-info')) {
         if (options.headers['X-BAPI-API-KEY'] !== 'test-bybit-key') throw new Error('Missing Bybit test key');
-        data = { retCode: 0, result: { rows: [{ coin: 'ETH', chains: [{ chainWithdraw: '1', withdrawFee: '0' }] }] } };
+        data = { retCode: 0, result: { rows: [{ coin: 'ETH', chains: [{ chainWithdraw: '1', chainDeposit: '1', withdrawFee: '0' }] }] } };
     } else if (url.hostname === 'api.bybit.com' && url.pathname.endsWith('/instruments-info')) {
         data = { retCode: 0, result: { list: [{ symbol: 'ETHUSDT', baseCoin: 'ETH', quoteCoin: 'USDT', status: 'Trading' }] } };
     } else if (url.hostname === 'api.bitget.com' && url.pathname.endsWith('/instruments')) {
@@ -88,11 +88,11 @@ globalThis.fetch = async (input, options) => {
     } else if (url.hostname === 'api.gateio.ws' && url.pathname.endsWith('/currency_pairs')) {
         data = [{ id: 'ETH_USDT', base: 'ETH', quote: 'USDT', trade_status: 'tradable', type: 'normal' }];
     } else if (url.hostname === 'api.kucoin.com' && url.pathname.endsWith('/currencies')) {
-        data = { code: '200000', data: [{ currency: 'ETH', chains: [{ isWithdrawEnabled: true }] }] };
+        data = { code: '200000', data: [{ currency: 'ETH', chains: [{ isWithdrawEnabled: true, isDepositEnabled: false }] }] };
     } else if (url.hostname === 'api.gateio.ws' && url.pathname.endsWith('/currencies')) {
-        data = [{ currency: 'ETH', chains: [{ withdraw_disabled: false, withdraw_delayed: false }] }];
+        data = [{ currency: 'ETH', chains: [{ withdraw_disabled: false, withdraw_delayed: false, deposit_disabled: false }] }];
     } else if (url.hostname === 'api.bitget.com' && url.pathname.endsWith('/coins')) {
-        data = { code: '00000', data: [{ coin: 'ETH', chains: [{ withdrawable: 'false' }] }] };
+        data = { code: '00000', data: [{ coin: 'ETH', chains: [{ withdrawable: 'false', rechargeable: 'true' }] }] };
     } else {
         throw new Error(`Unexpected request: ${url}`);
     }

@@ -19,7 +19,11 @@ const ASSET_EXCEPTIONS = {
         excludedAssets: ['XTER']
     },
     kucoin: {
-        aliases: { SUP: 'SUPERP', AIR: 'AIROUTER', RWA: 'RWAINC' },
+        aliases: {
+            SUP: 'SUPERP',
+            AIR: 'AIROUTER',
+            RWA: 'RWAINC'
+        },
         excludedAssets: []
     },
     bitget: {
@@ -27,7 +31,12 @@ const ASSET_EXCEPTIONS = {
         excludedAssets: []
     },
     gateio: {
-        aliases: { EDGE: 'DEFINITIVE', SUP: 'SUPERTX' },
+        aliases: {
+            EDGE: 'DEFINITIVE',
+            SUP: 'SUPERTX',
+            UP: 'UNITAS',
+            SUPERFORM: 'UP'
+        },
         excludedAssets: []
     }
 };

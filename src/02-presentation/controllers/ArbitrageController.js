@@ -1,17 +1,17 @@
 class ArbitrageController {
 
-    constructor({ startMarketData, stopMarketData, getOpportunities, getMarketStatus, refreshWithdrawalStatus, renderConsole }) {
+    constructor({ startMarketData, stopMarketData, getOpportunities, getMarketStatus, refreshTransferStatus, renderConsole }) {
         this.startMarketData = startMarketData;
         this.stopMarketData = stopMarketData;
         this.getOpportunities = getOpportunities;
         this.getMarketStatus = getMarketStatus;
-        this.refreshWithdrawalStatus = refreshWithdrawalStatus;
+        this.refreshTransferStatus = refreshTransferStatus;
         this.renderConsole = renderConsole;
     }
 
     start() {
         this.startMarketData.execute();
-        this.refreshWithdrawalStatus.execute();
+        this.refreshTransferStatus.execute();
     }
 
     render() {
@@ -19,7 +19,7 @@ class ArbitrageController {
     }
 
     stop() {
-        this.refreshWithdrawalStatus.stop();
+        this.refreshTransferStatus.stop();
         this.stopMarketData.execute();
     }
 }

@@ -1,9 +1,9 @@
-class RefreshWithdrawalStatusUseCase {
-    constructor(exchanges, requestClient, withdrawalStatus, interval, credentials = {}) {
+class RefreshTransferStatusUseCase {
+    constructor(exchanges, requestClient, transferStatus, interval, credentials = {}) {
         this.exchanges = exchanges;
         this.credentials = credentials;
         this.client = requestClient;
-        this.withdrawalStatus = withdrawalStatus;
+        this.transferStatus = transferStatus;
         this.interval = interval;
         this.started = false;
         this.stopped = false;
@@ -19,17 +19,17 @@ class RefreshWithdrawalStatusUseCase {
 
     async refresh() {
         await Promise.all(Object.entries(this.exchanges).map(async ([exchange, config]) => {
-            if (!config.adapter.getWithdrawalStatuses)
+            if (!config.adapter.getTransferStatuses)
                 return;
 
             try {
-                const statuses = await config.adapter.getWithdrawalStatuses((url, options) => this.client.request(url, options), this.credentials[exchange]);
+                const statuses = await config.adapter.getTransferStatuses((url, options) => this.client.request(url, options), this.credentials[exchange]);
 
                 if (!this.stopped)
-                    this.withdrawalStatus.update(exchange, statuses);
+                    this.transferStatus.update(exchange, statuses);
             } catch {
                 if (!this.stopped)
-                    this.withdrawalStatus.clear(exchange);
+                    this.transferStatus.clear(exchange);
             }
         }));
 
@@ -40,8 +40,8 @@ class RefreshWithdrawalStatusUseCase {
     stop() {
         this.stopped = true;
         clearTimeout(this.timer);
-        this.withdrawalStatus.clear();
+        this.transferStatus.clear();
     }
 }
 
-export default RefreshWithdrawalStatusUseCase;
+export default RefreshTransferStatusUseCase;

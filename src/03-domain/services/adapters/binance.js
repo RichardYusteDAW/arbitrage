@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
+import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -18,7 +18,7 @@ const binanceAdapter = {
             });
     },
 
-    async getWithdrawalStatuses(request, { apiKey, apiSecret } = {}) {
+    async getTransferStatuses(request, { apiKey, apiSecret } = {}) {
         if (!apiKey || !apiSecret)
             return [];
 
@@ -39,8 +39,11 @@ const binanceAdapter = {
         return response.flatMap(coin => {
             const assets = normalizeAssets('binance', coin.coin, '');
             const withdraw = coin.withdrawAllEnable === false ? false
-                : withdrawalAvailability((coin.networkList ?? []).map(network => network.withdrawEnable));
-            return assets ? [{ asset: assets.baseAsset, withdraw }] : [];
+                : transferAvailability((coin.networkList ?? []).map(network => network.withdrawEnable));
+            const deposit = coin.depositAllEnable === false ? false
+                : transferAvailability((coin.networkList ?? []).map(network => network.depositEnable));
+
+            return assets ? [{ asset: assets.baseAsset, withdraw, deposit }] : [];
         });
     },
 

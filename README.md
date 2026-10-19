@@ -58,11 +58,11 @@ Los constructores unifican los campos. La conversión de los mensajes externos s
 
 Todos los tests y sus fixtures están en `_test/`. Se ejecutan con `npm test`, sin conexiones a servicios externos. Cubren los cálculos, los adaptadores, los modelos, el libro de órdenes, las peticiones, las cotizaciones, las conexiones y el arranque y parada de la aplicación.
 
-## Disponibilidad de retiradas
+## Disponibilidad de transferencias
 
-La columna `withdraw` indica si el activo base puede retirarse del exchange de compra por al menos una red. `true`: alguna red habilitada; `false`: todas las redes conocidas bloqueadas; `null`: estado desconocido, consulta fallida o caducada. No comprueba dep?sitos en destino, compatibilidad entre redes ni restricciones de la cuenta.
+La columna `withdraw` muestra la retirada en el exchange de compra y `deposit`, el dep?sito en el exchange de venta. Cada direcci?n indica `true` si alguna red est? habilitada, `false` si todas las conocidas est?n bloqueadas y `null` si el dato es desconocido, fallido o caducado. Se muestran en azul y rojo en terminales con color. Todav?a no se comprueba que ambos exchanges tengan una misma red disponible.
 
-Se consulta una lista completa de monedas por exchange al arrancar y cada minuto (`withdrawalRefreshInterval`), sin bloquear las cotizaciones. KuCoin, Bitget y Gate.io disponen de adaptadores para sus endpoints p?blicos; Binance utiliza una consulta autenticada cuando hay credenciales. Los dem?s exchanges muestran `null` hasta disponer de una fuente adecuada. Los estados se normalizan con el mismo cat?logo de excepciones que los pares.
+Se consulta la disponibilidad al arrancar y cada minuto (`transferRefreshInterval`), sin bloquear las cotizaciones. KuCoin, Bitget y Gate.io utilizan endpoints p?blicos; Binance, Kraken, Bybit y OKX utilizan las credenciales de lectura de `.env`. Coinbase muestra `null`. Los estados utilizan el mismo cat?logo de excepciones que los pares.
 
 ### Binance autenticado
 
@@ -70,14 +70,14 @@ La aplicaci?n carga autom?ticamente `.env` desde la ra?z. Define `BINANCE_API_KE
 
 ### Kraken autenticado
 
-Define `KRAKEN_API_KEY` y `KRAKEN_API_SECRET` en `.env`, con permiso Query Funds. Se firma con SHA256/HMAC-SHA512 la consulta de lectura `GET /funding/v1/assets/withdraw?asset_class=currency` y se contrasta con `GET /0/public/Assets`. Se mantienen las equivalencias del cat?logo. Los estados desconocidos y los errores siguen produciendo `null`. La disponibilidad se refiere al activo y a la cuenta, sin identificar una red concreta.
+Define `KRAKEN_API_KEY` y `KRAKEN_API_SECRET` en `.env`, con permiso Query Funds. Se firma con SHA256/HMAC-SHA512 la consulta de lectura `GET /funding/v1/assets/withdraw?asset_class=currency` y su equivalente `/funding/v1/assets/deposit?asset_class=currency`, y se contrastan con `GET /0/public/Assets`. Se mantienen las equivalencias del cat?logo. Los estados desconocidos y los errores siguen produciendo `null`. La disponibilidad se refiere al activo y a la cuenta, sin identificar una red concreta.
 
 ### Bybit autenticado
 
-Define `BYBIT_API_KEY` y `BYBIT_API_SECRET` en `.env`, con una clave HMAC de lectura del dominio global Bybit. Se consulta la hora del servidor y se firma `GET /v5/asset/coin/query-info` con HMAC-SHA256. `chainWithdraw` indica el estado por red; una comisi?n vac?a indica que esa red no admite retiradas. Sin credenciales, con error o sin datos suficientes, el estado es `null`.
+Define `BYBIT_API_KEY` y `BYBIT_API_SECRET` en `.env`, con una clave HMAC de lectura del dominio global Bybit. Se consulta la hora del servidor y se firma `GET /v5/asset/coin/query-info` con HMAC-SHA256. `chainWithdraw` y `chainDeposit` indican el estado por red; una comisi?n vac?a indica que esa red no admite retiradas. Sin credenciales, con error o sin datos suficientes, el estado es `null`.
 
 ### OKX autenticado
 
-Define `OKX_API_KEY`, `OKX_API_SECRET` y `OKX_API_PASSPHRASE` en `.env`. Se consulta la hora del servidor y se firma `GET /api/v5/asset/currencies` con HMAC-SHA256 y Base64. Las redes se agrupan por moneda y `canWd` determina su disponibilidad. Si falta cualquiera de las tres credenciales o falla la consulta, `withdraw` es `null`. Se conserva la exclusi?n de XTER.
+Define `OKX_API_KEY`, `OKX_API_SECRET` y `OKX_API_PASSPHRASE` en `.env`. Se consulta la hora del servidor y se firma `GET /api/v5/asset/currencies` con HMAC-SHA256 y Base64. Las redes se agrupan por moneda y `canWd` y `canDep` determinan su disponibilidad. Si falta cualquiera de las tres credenciales o falla la consulta, `withdraw` es `null`. Se conserva la exclusi?n de XTER.
 
 Las consultas autenticadas de OKX usan por defecto `https://eea.okx.com` para la cuenta europea. Se puede configurar otro dominio oficial mediante `OKX_API_BASE_URL`. La API p?blica de precios mantiene su configuraci?n.

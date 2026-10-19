@@ -1,8 +1,8 @@
 class GetOpportunitiesUseCase {
 
-    constructor(quoteStore, calculateOpportunities, withdrawalStatus) {
+    constructor(quoteStore, calculateOpportunities, transferStatus) {
         this.quoteStore = quoteStore;
-        this.withdrawalStatus = withdrawalStatus;
+        this.transferStatus = transferStatus;
         this.calculateOpportunities = calculateOpportunities;
     }
 
@@ -12,7 +12,8 @@ class GetOpportunitiesUseCase {
             [exchange, new Map(tickers.map(ticker => [ticker.symbol, ticker.baseAsset]))]));
         return this.calculateOpportunities(data).map(opportunity => {
             const asset = assets.get(opportunity.buy)?.get(opportunity.symbol);
-            opportunity.withdraw = this.withdrawalStatus.get(opportunity.buy, asset);
+            opportunity.withdraw = this.transferStatus.get(opportunity.buy, asset);
+            opportunity.deposit = this.transferStatus.get(opportunity.sell, asset, 'deposit');
             return opportunity;
         });
     }

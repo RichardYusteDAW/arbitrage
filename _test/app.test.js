@@ -21,7 +21,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
         assert.ok(result.logs.some(line => line.includes('coinbase: conectado')));
         assert.ok(result.logs.some(line => line.includes('binance: conectado')));
         assert.ok(result.logs.some(line => line.includes('kraken: conectado')));
-        assert.equal(result.requested.every(url => /coin\/query-info|funding\/v1\/assets\/withdraw|\/Assets|capital\/config\/getall|\/time|currencies|coins|currency_pairs|symbols|bullet-public|exchangeInfo|instruments-info|AssetPairs|\/products|\/instruments/.test(url)), true);
+        assert.equal(result.requested.every(url => /coin\/query-info|funding\/v1\/assets\/(?:withdraw|deposit)|\/Assets|capital\/config\/getall|\/time|currencies|coins|currency_pairs|symbols|bullet-public|exchangeInfo|instruments-info|AssetPairs|\/products|\/instruments/.test(url)), true);
         assert.ok(result.logs.some(line => line.includes('okx: conectado')));
         assert.ok(result.logs.some(line => line.includes('bybit: conectado')));
         assert.ok(result.logs.some(line => line.includes('bitget: conectado')));
@@ -32,6 +32,8 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
         assert.equal(rows.find(row => row.buy === 'binance').withdraw, true);
         assert.equal(rows.find(row => row.buy === 'bybit').withdraw, true);
         assert.equal(rows.find(row => row.buy === 'okx').withdraw, true);
+        assert.ok(rows.filter(row => row.sell === 'kraken').every(row => row.deposit === true));
+        assert.equal(rows.find(row => row.sell === 'coinbase').deposit, null);
         assert.equal(result.closed, true);
         assert.equal(result.activeIntervals, 0);
     });

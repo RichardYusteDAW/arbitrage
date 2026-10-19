@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
+import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -20,7 +20,7 @@ const bybitAdapter = {
             });
     },
 
-    async getWithdrawalStatuses(request, { apiKey, apiSecret } = {}) {
+    async getTransferStatuses(request, { apiKey, apiSecret } = {}) {
         if (!apiKey || !apiSecret)
             return [];
 
@@ -48,10 +48,13 @@ const bybitAdapter = {
         }
         return response.result.rows.flatMap(coin => {
             const assets = normalizeAssets('bybit', coin.coin, '');
-            const withdraw = withdrawalAvailability((coin.chains ?? []).map(chain =>
+            const withdraw = transferAvailability((coin.chains ?? []).map(chain =>
                 chain.withdrawFee === '' || chain.chainWithdraw === '0' ? false
                     : chain.chainWithdraw === '1' ? true : null));
-            return assets ? [{ asset: assets.baseAsset, withdraw }] : [];
+            const deposit = transferAvailability((coin.chains ?? []).map(chain =>
+                chain.chainDeposit === '1' ? true : chain.chainDeposit === '0' ? false : null));
+
+            return assets ? [{ asset: assets.baseAsset, withdraw, deposit }] : [];
         });
     },
 

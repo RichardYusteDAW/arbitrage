@@ -1,17 +1,17 @@
-import RefreshWithdrawalStatusUseCase from '../../../03-domain/usecases/RefreshWithdrawalStatusUseCase.js';
+import RefreshTransferStatusUseCase from '../../../03-domain/usecases/RefreshTransferStatusUseCase.js';
 import { EXCHANGES, TIMING } from '../../../config.js';
 import { getRequestClientService } from '../services/requestClientIoC.js';
-import { getWithdrawalStatusService } from '../services/withdrawalStatusIoC.js';
+import { getTransferStatusService } from '../services/transferStatusIoC.js';
 
 let instance;
 
-const getRefreshWithdrawalStatusUseCase = () => {
+const getRefreshTransferStatusUseCase = () => {
     if (!instance)
-        instance = new RefreshWithdrawalStatusUseCase(
+        instance = new RefreshTransferStatusUseCase(
             EXCHANGES,
             getRequestClientService(),
-            getWithdrawalStatusService(),
-            TIMING.withdrawalRefreshInterval,
+            getTransferStatusService(),
+            TIMING.transferRefreshInterval,
             {
                 binance: { apiKey: process.env.BINANCE_API_KEY, apiSecret: process.env.BINANCE_API_SECRET },
                 kraken: { apiKey: process.env.KRAKEN_API_KEY, apiSecret: process.env.KRAKEN_API_SECRET },
@@ -27,4 +27,4 @@ const getRefreshWithdrawalStatusUseCase = () => {
     return instance;
 };
 
-export { getRefreshWithdrawalStatusUseCase };
+export { getRefreshTransferStatusUseCase };

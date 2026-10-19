@@ -1,4 +1,4 @@
-import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
+import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -19,7 +19,7 @@ const bitgetAdapter = {
             });
     },
 
-    async getWithdrawalStatuses(request) {
+    async getTransferStatuses(request) {
         const response = await request('https://api.bitget.com/api/v2/spot/public/coins');
 
         if (response.code !== '00000')
@@ -28,8 +28,10 @@ const bitgetAdapter = {
         return response.data.flatMap(coin => {
             const assets = normalizeAssets('bitget', coin.coin, '');
             return assets ? [{ asset: assets.baseAsset,
-                withdraw: withdrawalAvailability((coin.chains ?? []).map(chain =>
-                    chain.withdrawable === 'true' ? true : chain.withdrawable === 'false' ? false : null)) }] : [];
+                withdraw: transferAvailability((coin.chains ?? []).map(chain =>
+                    chain.withdrawable === 'true' ? true : chain.withdrawable === 'false' ? false : null)),
+                deposit: transferAvailability((coin.chains ?? []).map(chain =>
+                    chain.rechargeable === 'true' ? true : chain.rechargeable === 'false' ? false : null)) }] : [];
         });
     },
 

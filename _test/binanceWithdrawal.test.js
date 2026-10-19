@@ -4,7 +4,7 @@ import binance from '../src/03-domain/services/adapters/binance.js';
 
 test('Binance firma la consulta con la hora del servidor y envía la clave solo en la cabecera', async () => {
     const calls = [];
-    const statuses = await binance.getWithdrawalStatuses(async (url, options) => {
+    const statuses = await binance.getTransferStatuses(async (url, options) => {
         calls.push({ url, options });
         if (calls.length === 1) return { serverTime: 1700000000000 };
         const request = new URL(url);
@@ -17,26 +17,26 @@ test('Binance firma la consulta con la hora del servidor y envía la clave solo 
         assert.equal(request.searchParams.has('apiSecret'), false);
         assert.deepEqual(options.headers, { 'X-MBX-APIKEY': 'test-key' });
         return [
-            { coin: 'ETH', withdrawAllEnable: true, networkList: [{ withdrawEnable: false }, { withdrawEnable: true }] },
+            { coin: 'ETH', withdrawAllEnable: true, networkList: [{ withdrawEnable: false, depositEnable: false }, { withdrawEnable: true }] },
             { coin: 'BTC', withdrawAllEnable: false, networkList: [{ withdrawEnable: true }] },
-            { coin: 'CLOSED', networkList: [{ withdrawEnable: false }] },
+            { coin: 'CLOSED', networkList: [{ withdrawEnable: false, depositEnable: false }] },
             { coin: 'UNKNOWN', networkList: [] }
         ];
     }, { apiKey: 'test-key', apiSecret: 'test-secret' });
     assert.equal(calls[0].url, 'https://api.binance.com/api/v3/time');
-    assert.deepEqual(statuses, [{ asset: 'ETH', withdraw: true }, { asset: 'BTC', withdraw: false },
-        { asset: 'CLOSED', withdraw: false }, { asset: 'UNKNOWN', withdraw: null }]);
+    assert.deepEqual(statuses, [{ asset: 'ETH', withdraw: true, deposit: null }, { asset: 'BTC', withdraw: false, deposit: null },
+        { asset: 'CLOSED', withdraw: false, deposit: false }, { asset: 'UNKNOWN', withdraw: null, deposit: null }]);
 });
 
 test('Binance sin ambas credenciales no envía peticiones autenticadas', async () => {
     for (const credentials of [undefined, {}, { apiKey: 'test-key' }, { apiSecret: 'test-secret' }]) {
-        assert.deepEqual(await binance.getWithdrawalStatuses(() => assert.fail('Unexpected request'), credentials), []);
+        assert.deepEqual(await binance.getTransferStatuses(() => assert.fail('Unexpected request'), credentials), []);
     }
 });
 
 test('Binance rechaza reloj o respuestas inválidas sin incluir credenciales en sus errores', async () => {
     const credentials = { apiKey: 'test-key', apiSecret: 'test-secret' };
-    await assert.rejects(binance.getWithdrawalStatuses(async () => ({}), credentials), /Invalid Binance server time/);
-    await assert.rejects(binance.getWithdrawalStatuses(async url => url.endsWith('/time')
+    await assert.rejects(binance.getTransferStatuses(async () => ({}), credentials), /Invalid Binance server time/);
+    await assert.rejects(binance.getTransferStatuses(async url => url.endsWith('/time')
         ? { serverTime: 1700000000000 } : { code: -2015, msg: 'Denied' }, credentials), /Binance currencies request failed/);
 });

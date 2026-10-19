@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
+import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -19,7 +19,7 @@ const okxAdapter = {
             });
     },
 
-    async getWithdrawalStatuses(request, { apiKey, apiSecret, passphrase, apiBaseUrl = 'https://www.okx.com' } = {}) {
+    async getTransferStatuses(request, { apiKey, apiSecret, passphrase, apiBaseUrl = 'https://www.okx.com' } = {}) {
         if (!apiKey || !apiSecret || !passphrase)
             return [];
 
@@ -62,13 +62,14 @@ const okxAdapter = {
                 continue;
 
             const networks = networksByAsset.get(assets.baseAsset) ?? [];
-            networks.push(coin.canWd);
+            networks.push({ withdraw: coin.canWd, deposit: coin.canDep });
             networksByAsset.set(assets.baseAsset, networks);
         }
 
         return [...networksByAsset].map(([asset, states]) => ({
             asset,
-            withdraw: withdrawalAvailability(states)
+            withdraw: transferAvailability(states.map(state => state.withdraw)),
+            deposit: transferAvailability(states.map(state => state.deposit))
         }));
     },
 

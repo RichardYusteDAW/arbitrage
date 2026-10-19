@@ -1,4 +1,4 @@
-import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
+import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -19,7 +19,7 @@ const gateioAdapter = {
             });
     },
 
-    async getWithdrawalStatuses(request) {
+    async getTransferStatuses(request) {
         const response = await request('https://api.gateio.ws/api/v4/spot/currencies');
 
         if (!Array.isArray(response))
@@ -28,10 +28,13 @@ const gateioAdapter = {
         return response.flatMap(coin => {
             const assets = normalizeAssets('gateio', coin.currency, '');
             const chains = coin.chains?.length ? coin.chains : [coin];
-            const withdraw = withdrawalAvailability(chains.map(chain =>
+            const withdraw = transferAvailability(chains.map(chain =>
                 chain.withdraw_disabled === true || chain.withdraw_delayed === true ? false
                     : chain.withdraw_disabled === false ? true : null));
-            return assets ? [{ asset: assets.baseAsset, withdraw }] : [];
+            const deposit = transferAvailability(chains.map(chain =>
+                chain.deposit_disabled === true ? false : chain.deposit_disabled === false ? true : null));
+
+            return assets ? [{ asset: assets.baseAsset, withdraw, deposit }] : [];
         });
     },
 

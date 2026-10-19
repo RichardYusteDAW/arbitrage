@@ -1,4 +1,4 @@
-const withdrawalAvailability = states => {
+const transferAvailability = states => {
     if (states.some(state => state === true))
         return true;
 
@@ -8,4 +8,4 @@ const withdrawalAvailability = states => {
     return null;
 };
 
-export default withdrawalAvailability;
+export default transferAvailability;

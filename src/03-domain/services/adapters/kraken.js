@@ -30,28 +30,34 @@ const krakenAdapter = {
             });
     },
 
-    async getWithdrawalStatuses(request, { apiKey, apiSecret } = {}) {
+    async getTransferStatuses(request, { apiKey, apiSecret } = {}) {
         if (!apiKey || !apiSecret)
             return [];
 
-        const timestamp = BigInt(Date.now()) * 1000n;
-        lastNonce = timestamp > lastNonce ? timestamp : lastNonce + 1n;
-        const nonce = String(lastNonce);
-        const path = '/funding/v1/assets/withdraw?asset_class=currency';
-        const digest = createHash('sha256').update(nonce).digest();
-        const signature = createHmac('sha512', Buffer.from(apiSecret, 'base64'))
-            .update(path).update(digest).digest('base64');
-        const funding = await request('https://api.kraken.com' + path, {
-            headers: { 'API-Key': apiKey, 'API-Nonce': nonce, 'API-Sign': signature }
-        });
+        const getAvailableAssets = async direction => {
+            const timestamp = BigInt(Date.now()) * 1000n;
+            lastNonce = timestamp > lastNonce ? timestamp : lastNonce + 1n;
+            const nonce = String(lastNonce);
+            const path = '/funding/v1/assets/' + direction + '?asset_class=currency';
+            const digest = createHash('sha256').update(nonce).digest();
+            const signature = createHmac('sha512', Buffer.from(apiSecret, 'base64'))
+                .update(path).update(digest).digest('base64');
+            const funding = await request('https://api.kraken.com' + path, {
+                headers: { 'API-Key': apiKey, 'API-Nonce': nonce, 'API-Sign': signature }
+            });
 
-        if (!Array.isArray(funding.currency))
-            throw new Error('Kraken funding assets request failed');
+            if (!Array.isArray(funding.currency))
+                throw new Error('Kraken funding assets request failed');
 
-        const available = new Set(funding.currency.flatMap(coin => {
-            const assets = normalizeAssets('kraken', coin.name, '');
-            return assets ? [assets.baseAsset] : [];
-        }));
+            return new Set(funding.currency.flatMap(coin => {
+                const assets = normalizeAssets('kraken', coin.name, '');
+
+                return assets ? [assets.baseAsset] : [];
+            }));
+        };
+
+        const availableWithdraw = await getAvailableAssets('withdraw');
+        const availableDeposit = await getAvailableAssets('deposit');
         const response = await request('https://api.kraken.com/0/public/Assets');
 
         if (response.error?.length || !response.result)
@@ -71,9 +77,16 @@ const krakenAdapter = {
             if (['deposit_only', 'funding_temporarily_disabled', 'disabled'].includes(coin.status))
                 withdraw = false;
             else if (['enabled', 'withdrawal_only'].includes(coin.status))
-                withdraw = available.has(assets.baseAsset);
+                withdraw = availableWithdraw.has(assets.baseAsset);
 
-            return [{ asset: assets.baseAsset, withdraw }];
+            let deposit = null;
+
+            if (['withdrawal_only', 'funding_temporarily_disabled', 'disabled'].includes(coin.status))
+                deposit = false;
+            else if (['enabled', 'deposit_only'].includes(coin.status))
+                deposit = availableDeposit.has(assets.baseAsset);
+
+            return [{ asset: assets.baseAsset, withdraw, deposit }];
         });
     },
 

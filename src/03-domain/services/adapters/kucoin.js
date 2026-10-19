@@ -1,4 +1,4 @@
-import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
+import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -35,7 +35,7 @@ const kucoinAdapter = {
         return { websocketUrl: url.toString(), heartbeatInterval: server.pingInterval, heartbeatTimeout: server.pingTimeout };
     },
 
-    async getWithdrawalStatuses(request) {
+    async getTransferStatuses(request) {
         const response = await request('https://api.kucoin.com/api/v3/currencies');
 
         if (response.code !== '200000')
@@ -44,7 +44,8 @@ const kucoinAdapter = {
         return response.data.flatMap(coin => {
             const assets = normalizeAssets('kucoin', coin.currency, '');
             return assets ? [{ asset: assets.baseAsset,
-                withdraw: withdrawalAvailability((coin.chains ?? []).map(chain => chain.isWithdrawEnabled)) }] : [];
+                withdraw: transferAvailability((coin.chains ?? []).map(chain => chain.isWithdrawEnabled)),
+                deposit: transferAvailability((coin.chains ?? []).map(chain => chain.isDepositEnabled)) }] : [];
         });
     },
 

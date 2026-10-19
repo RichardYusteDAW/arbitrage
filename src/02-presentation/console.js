@@ -8,10 +8,11 @@ const formatOpportunity = opportunity => ({
     profitability: opportunity.profitability.toFixed(4) + '%',
     maxVolumeUSD: opportunity.maxVolumeUSD?.toFixed(2) ?? null,
     profitUSD: opportunity.profitUSD?.toFixed(2) ?? null,
-    withdraw: opportunity.withdraw ?? null
+    withdraw: opportunity.withdraw ?? null,
+    deposit: opportunity.deposit ?? null
 });
 
-const colorWithdrawal = value => {
+const colorAvailability = value => {
     if (typeof value !== 'boolean' || !process.stdout.isTTY || process.env.NO_COLOR !== undefined)
         return value;
 
@@ -32,11 +33,15 @@ const renderConsole = (opportunities, exchangeStatuses) => {
         console.log(`${exchangeName}: ${status.state} | conexiones ${status.connections}/${status.totalConnections} | pares con datos ${status.quotes}${status.error ? ` | ${status.error}` : ''}`);
     }
 
-    console.log(`Oportunidades: ${opportunities.length} | rentabilidad bruta, sin comisiones | USDT/USDC = USD | withdraw: retiro en compra (alguna red); null = desconocido`);
+    console.log(`Oportunidades: ${opportunities.length} | rentabilidad bruta, sin comisiones | USDT/USDC = USD | withdraw: salida en compra | deposit: entrada en venta | alguna red; null = desconocido`);
     console.table(sortedOpportunities.slice(0, 32).map(opportunity => {
         const row = formatOpportunity(opportunity);
 
-        return { ...row, withdraw: colorWithdrawal(row.withdraw) };
+        return {
+            ...row,
+            withdraw: colorAvailability(row.withdraw),
+            deposit: colorAvailability(row.deposit)
+        };
     }));
 };
 

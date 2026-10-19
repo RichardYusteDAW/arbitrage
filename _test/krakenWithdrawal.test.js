@@ -6,7 +6,10 @@ const credentials = { apiKey: 'test-key', apiSecret: 'dGVzdC1zZWNyZXQ=' };
 
 test('Kraken firma Funding sin permisos de retirada y normaliza los activos de ambas fuentes', async t => {
     t.mock.timers.enable({ apis: ['Date'], now: 1700000000000 });
-    const statuses = await kraken.getWithdrawalStatuses(async (url, options) => {
+    const statuses = await kraken.getTransferStatuses(async (url, options) => {
+        if (url.includes('/assets/deposit'))
+            return { currency: [{ name: 'BTC' }, { name: 'LIGHTER' }, { name: 'DEPOSIT' }] };
+
         if (url.includes('/funding/')) {
             assert.equal(url, 'https://api.kraken.com/funding/v1/assets/withdraw?asset_class=currency');
             assert.deepEqual(options.headers, { 'API-Key': 'test-key', 'API-Nonce': '1700000000000000',
@@ -22,9 +25,9 @@ test('Kraken firma Funding sin permisos de retirada y normaliza los activos de a
             MISSING: { altname: 'MISSING', status: 'enabled' }, UNKNOWN: { altname: 'UNKNOWN', status: 'future_status' }
         } };
     }, credentials);
-    assert.deepEqual(statuses, [{ asset: 'BTC', withdraw: true }, { asset: 'LUNC', withdraw: true },
-        { asset: 'LIT', withdraw: true }, { asset: 'PAUSED', withdraw: false }, { asset: 'DEPOSIT', withdraw: false },
-        { asset: 'MISSING', withdraw: false }, { asset: 'UNKNOWN', withdraw: null }]);
+    assert.deepEqual(statuses, [{ asset: 'BTC', withdraw: true, deposit: true }, { asset: 'LUNC', withdraw: true, deposit: false },
+        { asset: 'LIT', withdraw: true, deposit: true }, { asset: 'PAUSED', withdraw: false, deposit: false }, { asset: 'DEPOSIT', withdraw: false, deposit: true },
+        { asset: 'MISSING', withdraw: false, deposit: false }, { asset: 'UNKNOWN', withdraw: null, deposit: null }]);
 });
 
 test('Kraken genera nonces crecientes aunque el reloj no avance', async t => {
@@ -34,14 +37,15 @@ test('Kraken genera nonces crecientes aunque el reloj no avance', async t => {
         if (options) { nonces.push(BigInt(options.headers['API-Nonce'])); return { currency: [] }; }
         return { error: [], result: {} };
     };
-    await kraken.getWithdrawalStatuses(request, credentials);
-    await kraken.getWithdrawalStatuses(request, credentials);
-    assert.ok(nonces[1] > nonces[0]);
+    await kraken.getTransferStatuses(request, credentials);
+    await kraken.getTransferStatuses(request, credentials);
+    assert.equal(nonces.length, 4);
+    assert.ok(nonces.slice(1).every((nonce, index) => nonce > nonces[index]));
 });
 
 test('Kraken sin credenciales no consulta y respuestas fallidas no se convierten en bloqueos', async () => {
-    assert.deepEqual(await kraken.getWithdrawalStatuses(() => assert.fail('Unexpected request')), []);
-    await assert.rejects(kraken.getWithdrawalStatuses(async () => ({ error: ['Denied'] }), credentials), /funding assets request failed/);
-    await assert.rejects(kraken.getWithdrawalStatuses(async url => url.includes('/funding/')
+    assert.deepEqual(await kraken.getTransferStatuses(() => assert.fail('Unexpected request')), []);
+    await assert.rejects(kraken.getTransferStatuses(async () => ({ error: ['Denied'] }), credentials), /funding assets request failed/);
+    await assert.rejects(kraken.getTransferStatuses(async url => url.includes('/funding/')
         ? { currency: [] } : { error: ['Unavailable'] }, credentials), /asset status request failed/);
 });
