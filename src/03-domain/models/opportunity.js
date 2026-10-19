@@ -1,4 +1,5 @@
 class Opportunity {
+    
     constructor({ symbol, buy, sell, profitability, maxVolumeUSD, profitUSD }) {
         this.symbol = symbol;
         this.buy = buy;

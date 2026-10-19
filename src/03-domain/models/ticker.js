@@ -1,4 +1,5 @@
 class TickerData {
+    
     constructor({ symbol, baseAsset, bidPrice, bidQty, askPrice, askQty, receivedAt }) {
         this.symbol = symbol;
         this.baseAsset = baseAsset;

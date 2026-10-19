@@ -1,7 +1,16 @@
+import StartMarketDataUseCase from '../src/03-domain/usecases/StartMarketDataUseCase.js';
+import StopMarketDataUseCase from '../src/03-domain/usecases/StopMarketDataUseCase.js';
+import GetMarketStatusUseCase from '../src/03-domain/usecases/GetMarketStatusUseCase.js';
+import RequestClientService from '../src/03-domain/services/requestClientService.js';
+import QuoteStoreService from '../src/03-domain/services/quoteStoreService.js';
+import WebSocketConnectionService from '../src/03-domain/services/webSocketConnectionService.js';
+import { TIMING } from '../src/config.js';
+import PairSelectionService from '../src/03-domain/services/pairSelectionService.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMarketDataService, selectPairs } from '../services/marketData.js';
-import { calculateOpportunities } from '../helpers/calculations.js';
+import PairDiscoveryService from '../src/03-domain/services/pairDiscoveryService.js';
+import ConnectionService from '../src/03-domain/services/connectionService.js';
+import { calculateOpportunities } from '../src/03-domain/helpers/calculations.js';
 import { createFakeSocket, flush, pair, ticker } from './fixtures.js';
 
 const setup = async (t, options = {}) => {
@@ -18,10 +27,25 @@ const setup = async (t, options = {}) => {
         }; }
     };
     const config = name => ({ websocketUrl: name, pairsUrl: name, maxPairsPerConnection: options.maxPairs ?? 100, adapter });
-    const service = createMarketDataService({ one: config('one'), two: config('two') }, {
-        WebSocketImpl: Socket, reconnectDelay: 1000, quoteMaxAge: 30000,
+    const pairDiscovery = new PairDiscoveryService({ one: config('one'), two: config('two') });
+    const connections = new ConnectionService(pairDiscovery.getExchangeNames());
+    const quoteStore = new QuoteStoreService(pairDiscovery.getExchangeNames(), 30000);
+    const requestClient = new RequestClientService({
         fetchImpl: options.fetchImpl ?? (async () => ({ ok: true, json: async () => ({ pairs: options.pairs ?? [pair()] }) }))
     });
+    const startUseCase = new StartMarketDataUseCase({
+        pairDiscovery, connections, quoteStore, requestClient, pairSelection: new PairSelectionService(),
+        createConnection: options => new WebSocketConnectionService(options),
+        WebSocketImpl: Socket, reconnectDelay: 1000, timing: TIMING
+    });
+    const stopUseCase = new StopMarketDataUseCase(pairDiscovery, connections, requestClient, quoteStore);
+    const statusUseCase = new GetMarketStatusUseCase(pairDiscovery, connections, quoteStore);
+    const service = {
+        start: () => startUseCase.execute(),
+        stop: () => stopUseCase.execute(),
+        getData: () => quoteStore.getData(),
+        getStatus: () => statusUseCase.execute()
+    };
     t.after(() => service.stop());
     service.start();
     await flush();
@@ -34,10 +58,10 @@ const setup = async (t, options = {}) => {
 test('selecciona pares compartidos y conversiones, sin contar duplicados de un solo exchange', () => {
     const catalogs = { one: [pair('ETHBTC'), pair(), pair('ETHUSDC'), pair('OTHERBTC', 'OTHER'), pair('DUP', 'DUP'), pair('DUP', 'DUP')],
         two: [pair('ETHBTC')] };
-    const selected = selectPairs(catalogs);
+    const selected = new PairSelectionService().selectPairs(catalogs);
     assert.deepEqual(selected.one.map(value => value.symbol), ['ETHBTC', 'ETHUSDT', 'ETHUSDC']);
     assert.deepEqual(selected.two.map(value => value.symbol), ['ETHBTC']);
-    assert.deepEqual(selectPairs({}), {});
+    assert.deepEqual(new PairSelectionService().selectPairs({}), {});
 });
 
 test('inicia una sola vez, suscribe cada conexión y produce oportunidades con fecha de recepción', async t => {

@@ -1,6 +1,6 @@
 import { setImmediate } from 'node:timers/promises';
-import { ExchangePair } from '../models/exchange.js';
-import { TickerData } from '../models/ticker.js';
+import { ExchangePair } from '../src/03-domain/models/exchange.js';
+import { TickerData } from '../src/03-domain/models/ticker.js';
 
 export const flush = () => setImmediate();
 export const pair = (symbol = 'ETHUSDT', baseAsset = 'ETH', id = symbol) => new ExchangePair({ id, symbol, baseAsset });

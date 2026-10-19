@@ -1,7 +1,8 @@
 import { TickerData } from '../models/ticker.js';
-import { TIMING } from '../data/settings.js';
+import { TIMING } from '../../config.js';
 
-class QuoteStore {
+class QuoteStoreService {
+    
     constructor(exchangeNames, maxAge = TIMING.quoteMaxAge) {
         this.maxAge = maxAge;
         this.exchanges = new Map(exchangeNames.map(name => [name, new Map()]));
@@ -46,4 +47,4 @@ class QuoteStore {
     }
 }
 
-export { QuoteStore };
+export default QuoteStoreService;

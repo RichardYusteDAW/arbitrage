@@ -1,6 +1,6 @@
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
-import { OrderBook } from '../orderBook.js';
+import OrderBookService from '../orderBookService.js';
 
 const coinbaseAdapter = {
     async discover(config, request) {
@@ -81,7 +81,7 @@ const coinbaseAdapter = {
                     continue;
 
                 if (event.type === 'snapshot')
-                    books.set(event.product_id, new OrderBook());
+                    books.set(event.product_id, new OrderBookService());
 
                 const book = books.get(event.product_id);
 

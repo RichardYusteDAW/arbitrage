@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WebSocketConnection } from '../services/webSocketConnection.js';
-import { TIMING } from '../data/settings.js';
+import WebSocketConnectionService from '../src/03-domain/services/webSocketConnectionService.js';
+import { TIMING } from '../src/config.js';
 import { createFakeSocket, pair, ticker, flush } from './fixtures.js';
 
 const setup = async (t, { subscriptionError = false } = {}) => {
@@ -11,7 +11,7 @@ const setup = async (t, { subscriptionError = false } = {}) => {
     const states = [];
     let disconnected = 0;
     let updates = [];
-    const connection = new WebSocketConnection({ exchangeName: 'one', pairs: [pair()], WebSocketImpl: Socket,
+    const connection = new WebSocketConnectionService({ exchangeName: 'one', pairs: [pair()], WebSocketImpl: Socket,
         config: { websocketUrl: 'one', adapter: {
             createParser: () => message => [message],
             subscriptions: () => [{ subscribe: 'ETHUSDT' }],

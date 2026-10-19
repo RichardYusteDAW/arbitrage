@@ -1,8 +1,17 @@
-import { TIMING } from '../data/settings.js';
+import { TIMING } from '../../config.js';
 
-class WebSocketConnection {
-    constructor({ exchangeName, config, pairs, WebSocketImpl = globalThis.WebSocket,
-        reconnectDelay = TIMING.reconnectDelay, onTickers, onDisconnect, onState }) {
+class WebSocketConnectionService {
+    
+    constructor({ 
+        exchangeName, 
+        config,
+        pairs, 
+        WebSocketImpl = globalThis.WebSocket,
+        reconnectDelay = TIMING.reconnectDelay, 
+        onTickers, 
+        onDisconnect, 
+        onState 
+    }) {
         this.exchangeName = exchangeName;
         this.config = config;
         this.pairs = pairs;
@@ -126,4 +135,4 @@ class WebSocketConnection {
     }
 }
 
-export { WebSocketConnection };
+export default WebSocketConnectionService;

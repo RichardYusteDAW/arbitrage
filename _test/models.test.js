@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TickerData } from '../models/ticker.js';
-import { Opportunity } from '../models/opportunity.js';
-import { ExchangeConfig, ExchangePair } from '../models/exchange.js';
-import EXCHANGES from '../data/exchanges.js';
+import { TickerData } from '../src/03-domain/models/ticker.js';
+import { Opportunity } from '../src/03-domain/models/opportunity.js';
+import { ExchangeConfig, ExchangePair } from '../src/03-domain/models/exchange.js';
+import { EXCHANGES } from '../src/config.js';
 import { ticker, pair } from './fixtures.js';
 
 test('TickerData conserva los campos y añade receivedAt solo cuando se recibe', () => {

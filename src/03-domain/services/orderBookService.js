@@ -1,4 +1,5 @@
-class OrderBook {
+class OrderBookService {
+    
     constructor() {
         this.bids = new Map();
         this.asks = new Map();
@@ -41,4 +42,4 @@ class OrderBook {
     }
 }
 
-export { OrderBook };
+export default OrderBookService;

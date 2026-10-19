@@ -1,4 +1,5 @@
 class ExchangePair {
+    
     constructor({ id, symbol, baseAsset }) {
         this.id = id;
         this.symbol = symbol;

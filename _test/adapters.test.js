@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import binance from '../services/adapters/binance.js';
-import kraken from '../services/adapters/kraken.js';
-import coinbase from '../services/adapters/coinbase.js';
+import binance from '../src/03-domain/services/adapters/binance.js';
+import kraken from '../src/03-domain/services/adapters/kraken.js';
+import coinbase from '../src/03-domain/services/adapters/coinbase.js';
 import { pair, ticker, product, level, bookMessage } from './fixtures.js';
 
 test('Binance descubre solo pares activos y habilitados para spot', async () => {

@@ -5,10 +5,10 @@
   "license": "ISC",
   "author": "Richard Yuste",
   "type": "module",
-  "main": "app.js",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
     "test": "node --test"
   },
   "engines": {

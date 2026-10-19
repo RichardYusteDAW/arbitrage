@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateOpportunities } from '../helpers/calculations.js';
+import { calculateOpportunities } from '../src/03-domain/helpers/calculations.js';
 import { ticker } from './fixtures.js';
-import { Opportunity } from '../models/opportunity.js';
+import { Opportunity } from '../src/03-domain/models/opportunity.js';
 
 const inputs = (buy = {}, sell = {}, conversions = [ticker()]) => ({
     buyer: [ticker({ symbol: 'ETHBTC', askPrice: 10, bidPrice: 9, ...buy }), ...conversions],

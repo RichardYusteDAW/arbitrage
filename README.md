@@ -18,34 +18,36 @@ La terminal muestra el estado de cada exchange desde el arranque y refresca la t
 - Las conexiones se reparten en grupos según `maxPairsPerConnection`. Se reconectan automáticamente con una espera creciente de hasta 30 segundos.
 - Al desconectarse una conexión se retiran sus cotizaciones. También se excluyen cotizaciones sin actualizaciones durante 30 segundos (`quoteMaxAge` en el servicio).
 
-La configuración de los exchanges está en `data/exchanges.js` y todos los tiempos, en milisegundos, en `data/settings.js`.
+La configuración de los exchanges está en `src/config.js` y todos los tiempos, en milisegundos, en `src/config.js`.
 
 ## Organización
 
-- `app.js`: arranque, refresco periódico y parada.
-- `presentation/console.js`: formato y presentación de resultados y estados.
-- `helpers/calculations.js`: creación de mapas y cálculo de oportunidades.
-- `services/marketData.js`: coordinación de descubrimiento, conexiones y datos.
-- `services/webSocketConnection.js`: suscripciones, heartbeat, timeout y reconexión de una conexión.
-- `services/requestClient.js`: peticiones REST, timeout y cancelación.
-- `services/pairSelection.js`: selección de pares compartidos y conversiones.
-- `services/quoteStore.js`: almacenamiento y caducidad de cotizaciones.
-- `services/orderBook.js`: aplicación de actualizaciones y consulta del mejor bid/ask.
-- `services/adapters/`: interpretación de los mensajes de cada exchange.
+- `src/app.js`: arranque, refresco periódico y parada.
+- `src/02-presentation/console.js`: formato y presentación de resultados y estados.
+- `src/03-domain/helpers/calculations.js`: creación de mapas y cálculo de oportunidades.
+- `src/03-domain/services/pairDiscoveryService.js`: descubrimiento de pares, cat?logos y cancelaci?n de reintentos.
+- `src/03-domain/services/connectionService.js`: registro y consulta del estado de conexiones; los casos de uso controlan su cierre.
+- `src/03-domain/usecases/`: coordinaci?n de arranque, descubrimiento, suscripci?n, parada y consultas.
+- `src/02-presentation/controllers/ArbitrageController.js`: ejecuci?n de casos de uso y presentaci?n por consola.
+- `src/01-common/containers/`: creaci?n e inyecci?n de servicios y casos de uso.
+- `src/03-domain/services/webSocketConnectionService.js`: suscripciones, heartbeat, timeout y reconexión de una conexión.
+- `src/03-domain/services/requestClientService.js`: peticiones REST, timeout y cancelación.
+- `src/03-domain/services/pairSelectionService.js`: selección de pares compartidos y conversiones.
+- `src/03-domain/services/quoteStoreService.js`: almacenamiento y caducidad de cotizaciones.
+- `src/03-domain/services/orderBookService.js`: aplicación de actualizaciones y consulta del mejor bid/ask.
+- `src/03-domain/services/adapters/`: interpretación de los mensajes de cada exchange.
 
-Las fórmulas de `helpers/calculations.js` no se han cambiado: rentabilidad bruta sin comisiones y conversión USDT primero, USDC después; sin ninguno se devuelve `null`. USDT y USDC se consideran equivalentes a USD. El emparejamiento sigue utilizando los símbolos normalizados, sin resolver identidades de tokens que comparten ticker.
-
-Se han retirado los helpers REST antiguos: la normalización se realiza en los adaptadores, sin mantener dos implementaciones de cada exchange.
+Las fórmulas de `src/03-domain/helpers/calculations.js` no se han cambiado: rentabilidad bruta sin comisiones y conversión USDT primero, USDC después; sin ninguno se devuelve `null`. USDT y USDC se consideran equivalentes a USD. El emparejamiento sigue utilizando los símbolos normalizados, sin resolver identidades de tokens que comparten ticker.
 
 ## Modelos compartidos
 
-Los módulos utilizan las mismas clases de `models/` para construir los datos:
+Los módulos utilizan las mismas clases de `src/03-domain/models/` para construir los datos:
 
 - `ticker.js`: `TickerData`; el servicio añade `receivedAt` al guardar una cotización.
 - `opportunity.js`: `Opportunity`, con rentabilidad, volumen y beneficio.
 - `exchange.js`: `ExchangeConfig` y `ExchangePair`, además del contrato JSDoc de los adaptadores.
 
-Los constructores unifican los campos. La conversión de los mensajes externos sigue en los adaptadores y las validaciones de cotizaciones, en el almacén. JSDoc documenta los tipos; las clases no incorporan validaciones nuevas.
+Los constructores unifican los campos. La conversión de los mensajes externos sigue en los adaptadores y las validaciones de cotizaciones, en el almacén. Las clases no incorporan validaciones nuevas.
 
 ## Pruebas
 

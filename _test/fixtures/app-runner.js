@@ -52,7 +52,7 @@ const tables = [];
 console.log = (...values) => logs.push(values.join(' '));
 console.table = rows => tables.push(rows);
 
-await import('../../app.js');
+await import('../../src/app.js');
 const deadline = Date.now() + 2000;
 while (Socket.instances.filter(socket => !socket.closed && socket.sent.length).length < 3) {
     if (Date.now() > deadline) throw new Error('App did not connect to all fake exchanges');
