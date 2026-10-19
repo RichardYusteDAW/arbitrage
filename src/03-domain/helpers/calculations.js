@@ -21,7 +21,7 @@ const calculateMaxVolume = (baseAsset, askQty, bidQty, market) => {
 
     if (!Number.isFinite(maxQty) || maxQty <= 0) return null;
 
-    for (const quote of ['USDT', 'USDC']) {
+    for (const quote of ['USD', 'USDT', 'USDC']) {
         const ticker = market.get(baseAsset + quote);
         if (!ticker) continue;
 

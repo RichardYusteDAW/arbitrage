@@ -51,7 +51,7 @@ test('USDT tiene prioridad sobre USDC independientemente del orden de entrada', 
     assert.equal(calculateOpportunities(data)[0].maxVolumeUSD, 100);
 });
 
-test('utiliza USDC si falta USDT y devuelve null si faltan ambos', () => {
+test('utiliza USDC si faltan USD y USDT y devuelve null sin ninguna conversi?n', () => {
     assert.equal(calculateOpportunities(inputs({}, {}, [ticker({ symbol: 'ETHUSDC', askPrice: 200 })]))[0].maxVolumeUSD, 200);
     const [result] = calculateOpportunities(inputs({}, {}, []));
     assert.equal(result.maxVolumeUSD, null);
@@ -84,4 +84,27 @@ test('no modifica el objeto ni los arrays de entrada', () => {
     const before = structuredClone(data);
     calculateOpportunities(data);
     assert.deepEqual(structuredClone(data), before);
+});
+
+
+test('USD tiene prioridad sobre USDT y USDC independientemente del orden de entrada', () => {
+    const conversions = [ticker({ symbol: 'ETHUSDC', askPrice: 200 }),
+        ticker({ askPrice: 100 }), ticker({ symbol: 'ETHUSD', askPrice: 150 })];
+    for (const ordered of [conversions, [...conversions].reverse()]) {
+        const [result] = calculateOpportunities(inputs({}, {}, ordered));
+        assert.equal(result.maxVolumeUSD, 150);
+        assert.equal(result.profitUSD, 15);
+    }
+});
+
+test('un par cotizado en USD permite calcular su volumen sin USDT ni USDC', () => {
+    const [result] = calculateOpportunities(inputs({ symbol: 'ETHUSD' }, { symbol: 'ETHUSD' }, []));
+    assert.equal(result.maxVolumeUSD, 10);
+    assert.equal(result.profitUSD, 1);
+});
+
+test('si el par USD existe con precio inv?lido devuelve null como las otras conversiones', () => {
+    const [result] = calculateOpportunities(inputs({}, {}, [ticker({ symbol: 'ETHUSD', askPrice: 0 }), ticker()]));
+    assert.equal(result.maxVolumeUSD, null);
+    assert.equal(result.profitUSD, null);
 });

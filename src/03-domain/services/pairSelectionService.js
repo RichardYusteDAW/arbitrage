@@ -1,4 +1,4 @@
-const CONVERSION_QUOTES = ['USDT', 'USDC'];
+const CONVERSION_QUOTES = ['USD', 'USDT', 'USDC'];
 
 class PairSelectionService {
     

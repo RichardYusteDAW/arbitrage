@@ -56,10 +56,10 @@ const setup = async (t, options = {}) => {
 };
 
 test('selecciona pares compartidos y conversiones, sin contar duplicados de un solo exchange', () => {
-    const catalogs = { one: [pair('ETHBTC'), pair(), pair('ETHUSDC'), pair('OTHERBTC', 'OTHER'), pair('DUP', 'DUP'), pair('DUP', 'DUP')],
+    const catalogs = { one: [pair('ETHBTC'), pair(), pair('ETHUSDC'), pair('ETHUSD'), pair('OTHERBTC', 'OTHER'), pair('DUP', 'DUP'), pair('DUP', 'DUP')],
         two: [pair('ETHBTC')] };
     const selected = new PairSelectionService().selectPairs(catalogs);
-    assert.deepEqual(selected.one.map(value => value.symbol), ['ETHBTC', 'ETHUSDT', 'ETHUSDC']);
+    assert.deepEqual(selected.one.map(value => value.symbol), ['ETHBTC', 'ETHUSDT', 'ETHUSDC', 'ETHUSD']);
     assert.deepEqual(selected.two.map(value => value.symbol), ['ETHBTC']);
     assert.deepEqual(new PairSelectionService().selectPairs({}), {});
 });
