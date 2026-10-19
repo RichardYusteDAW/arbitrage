@@ -2,6 +2,7 @@ import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
 
 const binanceAdapter = {
+    
     async discover(config, request) {
 
         const data = await request(config.pairsUrl);

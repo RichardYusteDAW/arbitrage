@@ -37,6 +37,9 @@ class StartMarketDataUseCase {
                     exchangeName,
                     config,
                     pairs: groupPairs,
+                    prepareConnection: config.adapter.prepareConnection
+                        ? () => config.adapter.prepareConnection(config, (url, options) => this.client.request(url, options))
+                        : undefined,
                     WebSocketImpl: this.WebSocketImpl,
                     reconnectDelay: this.reconnectDelay,
                     onTickers: tickers => this.quotes.update(exchangeName, tickers),
@@ -63,9 +66,12 @@ class StartMarketDataUseCase {
     }
 
     execute() {
-        if (!this.discovery.begin()) return;
+        if (!this.discovery.begin()) 
+            return;
+
         if (!this.WebSocketImpl)
             throw new Error('WebSocket unavailable: use Node.js 22 or newer');
+        
         for (const name of this.discovery.getExchangeNames())
             void this.discover(name);
     }

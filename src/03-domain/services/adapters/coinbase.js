@@ -3,6 +3,7 @@ import { TickerData } from '../../models/ticker.js';
 import OrderBookService from '../orderBookService.js';
 
 const coinbaseAdapter = {
+    
     async discover(config, request) {
         const products = new Map();
         const cursors = new Set();
@@ -66,6 +67,7 @@ const coinbaseAdapter = {
             if (Number.isInteger(message.sequence_num)) {
                 if (lastSequence !== undefined && message.sequence_num !== lastSequence + 1)
                     throw new Error('Order book sequence gap; new snapshot required');
+                
                 lastSequence = message.sequence_num;
             }
 
@@ -76,7 +78,6 @@ const coinbaseAdapter = {
 
             for (const event of message.events) {
                 const pair = pairsMap.get(event.product_id);
-
                 if (!pair)
                     continue;
 

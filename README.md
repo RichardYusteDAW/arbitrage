@@ -12,6 +12,11 @@ La terminal muestra el estado de cada exchange desde el arranque y refresca la t
 ## Datos
 
 - REST se utiliza para descubrir los pares activos. Los precios y cantidades llegan por WebSocket.
+- Gate.io utiliza `spot.book_ticker` con precios y cantidades BBO, grupos de 100 pares y heartbeat `spot.ping`.
+- KuCoin utiliza `/market/ticker`, grupos de 100 pares y un token p?blico renovado antes de cada conexi?n; el servidor establece los tiempos de heartbeat.
+- Bitget v3 utiliza `ticker` spot con precios y cantidades BBO, grupos de 100 pares y heartbeat de texto `ping`/`pong`.
+- Bybit utiliza `orderbook.1` para spot, heartbeat cada 20 segundos, grupos de 100 pares y mensajes de suscripci?n de hasta 10 pares.
+- OKX utiliza el canal p?blico `tickers`, con heartbeat de texto `ping`/`pong` y grupos de 100 pares.
 - Binance utiliza `bookTicker`; Kraken v2, `ticker` con `event_trigger: bbo`; Coinbase, `level2` y `heartbeats`.
 - Se suscriben los pares compartidos entre exchanges y sus pares de conversión a USDT/USDC.
 - Coinbase conserva el libro completo en memoria, aplica las cantidades absolutas y elimina niveles con cantidad cero. Un salto de secuencia provoca reconexión y una nueva instantánea.

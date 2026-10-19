@@ -1,0 +1,57 @@
+import { ExchangePair } from '../../models/exchange.js';
+import { TickerData } from '../../models/ticker.js';
+
+const bitgetAdapter = {
+
+    async discover(config, request) {
+        const response = await request(config.pairsUrl);
+        if (response.code !== '00000') 
+            throw new Error(response.msg || 'Bitget discovery failed');
+        
+        return response.data
+            .filter(pair => pair.category === 'SPOT' && pair.status === 'online')
+            .map(pair => new ExchangePair({
+                id: pair.symbol,
+                symbol: pair.baseCoin + pair.quoteCoin,
+                baseAsset: pair.baseCoin
+            }));
+    },
+
+    subscriptions(pairs) {
+        return [{ op: 'subscribe', args: pairs.map(pair => ({ instType: 'spot', topic: 'ticker', symbol: pair.id })) }];
+    },
+
+    decodeMessage(text) {
+        return text === 'pong' ? null : JSON.parse(text);
+    },
+
+    createParser(pairs) {
+        const pairsMap = new Map(pairs.map(pair => [pair.id, pair]));
+
+        return message => {
+
+            if (message.event === 'error' || (message.code !== undefined && message.code !== '00000'))
+                throw new Error(message.msg || 'Bitget subscription failed');
+
+            if (message.arg?.instType !== 'spot' || message.arg.topic !== 'ticker' || !message.data) 
+                return [];
+
+            const pair = pairsMap.get(message.arg.symbol);
+            if (!pair) 
+                return [];
+
+            return message.data.map(ticker => new TickerData({
+                symbol: pair.symbol,
+                baseAsset: pair.baseAsset,
+                bidPrice: Number(ticker.bid1Price),
+                bidQty: Number(ticker.bid1Size),
+                askPrice: Number(ticker.ask1Price),
+                askQty: Number(ticker.ask1Size)
+            }));
+        };
+    },
+
+    heartbeat: () => 'ping'
+};
+
+export default bitgetAdapter;

@@ -6,6 +6,7 @@ class WebSocketConnectionService {
         exchangeName, 
         config,
         pairs, 
+        prepareConnection,
         WebSocketImpl = globalThis.WebSocket,
         reconnectDelay = TIMING.reconnectDelay, 
         onTickers, 
@@ -15,6 +16,7 @@ class WebSocketConnectionService {
         this.exchangeName = exchangeName;
         this.config = config;
         this.pairs = pairs;
+        this.prepareConnection = prepareConnection;
         this.WebSocketImpl = WebSocketImpl;
         this.reconnectDelay = reconnectDelay;
         this.onTickers = onTickers;
@@ -33,9 +35,10 @@ class WebSocketConnectionService {
     clearConnectionTimers() {
         clearTimeout(this.connectionTimer);
         clearInterval(this.watchdog);
+        clearTimeout(this.pongTimer);
     }
 
-    connect() {
+    async connect() {
         if (this.stopped)
             return;
 
@@ -64,8 +67,10 @@ class WebSocketConnectionService {
         };
 
         try {
+            const settings = this.prepareConnection ? await this.prepareConnection() : {};
+            if (this.stopped) return;
             const parse = this.config.adapter.createParser(this.pairs);
-            socket = new this.WebSocketImpl(this.config.websocketUrl);
+            socket = new this.WebSocketImpl(settings.websocketUrl ?? this.config.websocketUrl);
             this.socket = socket;
             this.connectionTimer = setTimeout(() => fail(new Error('Connection timeout')), TIMING.connectionTimeout);
 
@@ -83,7 +88,7 @@ class WebSocketConnectionService {
 
                 try {
                     for (const subscription of this.config.adapter.subscriptions(this.pairs))
-                        socket.send(JSON.stringify(subscription));
+                        socket.send(typeof subscription === 'string' ? subscription : JSON.stringify(subscription));
 
                 } catch (error) {
                     fail(error); return;
@@ -94,14 +99,19 @@ class WebSocketConnectionService {
                         return fail(new Error(`No messages received for ${TIMING.inactivityTimeout / 1000} seconds`));
 
                     try {
-                        if (this.config.adapter.heartbeat)
-                            socket.send(JSON.stringify(this.config.adapter.heartbeat()));
+                        if (this.config.adapter.heartbeat) {
+                            const heartbeat = this.config.adapter.heartbeat();
+                            socket.send(typeof heartbeat === 'string' ? heartbeat : JSON.stringify(heartbeat));
+                            if (settings.heartbeatTimeout) {
+                                this.pongTimer = setTimeout(() => fail(new Error('Heartbeat pong timeout')), settings.heartbeatTimeout);
+                            }
+                        }
 
                     } catch (error) {
                         fail(error);
                     }
 
-                }, TIMING.heartbeatInterval);
+                }, settings.heartbeatInterval ?? TIMING.heartbeatInterval);
             });
             socket.addEventListener('message', event => {
 
@@ -111,7 +121,13 @@ class WebSocketConnectionService {
                 this.lastMessage = Date.now();
 
                 try {
-                    this.onTickers(parse(JSON.parse(event.data)));
+                    const message = this.config.adapter.decodeMessage
+                        ? this.config.adapter.decodeMessage(event.data)
+                        : JSON.parse(event.data);
+                    if (message !== null) {
+                        if (this.config.adapter.isPong?.(message)) clearTimeout(this.pongTimer);
+                        this.onTickers(parse(message));
+                    }
 
                 } catch (error) {
                     fail(error);

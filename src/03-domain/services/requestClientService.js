@@ -8,16 +8,17 @@ class RequestClientService {
         this.pendingRequests = new Set();
     }
 
-    async request(url) {
+    async request(url, options = {}) {
         const controller = new AbortController();
         this.pendingRequests.add(controller);
         const timer = setTimeout(() => controller.abort(), this.timeout);
 
         try {
-            const response = await this.fetchImpl(url, { signal: controller.signal });
+            const response = await this.fetchImpl(url, { ...options, signal: controller.signal });
             if (!response.ok)
                 throw new Error(`HTTP ${response.status}`);
             return await response.json();
+            
         } finally {
             clearTimeout(timer);
             this.pendingRequests.delete(controller);

@@ -4,6 +4,7 @@ import { TickerData } from '../../models/ticker.js';
 const ALIASES = { XBT: 'BTC', XDG: 'DOGE' };
 
 const krakenAdapter = {
+    
     async discover(config, request) {
 
         const data = await request(config.pairsUrl);

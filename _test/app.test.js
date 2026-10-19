@@ -6,22 +6,27 @@ import { fileURLToPath } from 'node:url';
 
 const run = promisify(execFile);
 for (const signal of ['SIGINT', 'SIGTERM']) {
-    test(`app arranca, muestra los tres exchanges y se detiene con ${signal}`, async () => {
+    test(`app arranca, muestra los ocho exchanges y se detiene con ${signal}`, async () => {
         const { stdout } = await run(process.execPath, [fileURLToPath(new URL('./fixtures/app-runner.js', import.meta.url))], {
             env: { ...process.env, TEST_STOP_SIGNAL: signal }, timeout: 5000
         });
         const result = JSON.parse(stdout);
         assert.deepEqual(result.tables[0], []); // Immediate render before discovery completes.
         const rows = result.tables.at(-1);
-        assert.equal(rows.length, 3);
+        assert.equal(rows.length, 8);
         assert.deepEqual(rows.map(row => `${row.buy}->${row.sell}`).sort(),
-            ['binance->coinbase', 'binance->kraken', 'coinbase->kraken']);
+            ['binance->coinbase', 'binance->kraken', 'bitget->kraken', 'bybit->kraken', 'coinbase->kraken', 'gateio->kraken', 'kucoin->kraken', 'okx->kraken']);
         assert.ok(rows.some(row => row.buy === 'binance' && row.sell === 'coinbase'
             && row.maxVolumeUSD === '50.00' && row.profitUSD === '0.50' && row.profitability === '1.0000%'));
         assert.ok(result.logs.some(line => line.includes('coinbase: conectado')));
         assert.ok(result.logs.some(line => line.includes('binance: conectado')));
         assert.ok(result.logs.some(line => line.includes('kraken: conectado')));
-        assert.equal(result.requested.every(url => /exchangeInfo|AssetPairs|\/products/.test(url)), true);
+        assert.equal(result.requested.every(url => /currency_pairs|symbols|bullet-public|exchangeInfo|instruments-info|AssetPairs|\/products|\/instruments/.test(url)), true);
+        assert.ok(result.logs.some(line => line.includes('okx: conectado')));
+        assert.ok(result.logs.some(line => line.includes('bybit: conectado')));
+        assert.ok(result.logs.some(line => line.includes('bitget: conectado')));
+        assert.ok(result.logs.some(line => line.includes('kucoin: conectado')));
+        assert.ok(result.logs.some(line => line.includes('gateio: conectado')));
         assert.equal(result.closed, true);
         assert.equal(result.activeIntervals, 0);
     });
