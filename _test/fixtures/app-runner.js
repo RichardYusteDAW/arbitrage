@@ -18,7 +18,18 @@ class Socket extends BaseSocket {
         const message = JSON.parse(text);
         queueMicrotask(() => {
             if (this.closed) return;
-            if (message.channel === 'spot.book_ticker' && message.event === 'subscribe') {
+            if (message.event === 'bts:subscribe') {
+                this.message({ event: 'data', channel: message.data.channel, data: { bids: [['100', '1']], asks: [['101', '2']] } });
+            } else if (message.action === 'subscribe') {
+                this.message({ event: 'ticker24h', data: [{ market: 'ETH-USDT', bid: '100', bidSize: '1', ask: '101', askSize: '2' }] });
+            } else if (message.event === 'subscribe' && message.channel === 'book') {
+                this.message({ event: 'subscribed', channel: 'book', chanId: 1, symbol: message.symbol });
+                this.message([1, [[100, 1, 1], [101, 1, -2]]]);
+            } else if (message.method === 'subscribe' && Array.isArray(message.params)) {
+                this.message({ s: 'ethusdt', b: '100', B: '1', a: '101', A: '2' });
+            } else if (message.method === 'subscribe' && message.params?.channels) {
+                this.message({ code: 0, result: { channel: 'ticker', instrument_name: 'ETH_USDT', data: [{ b: '100', bs: '1', k: '101', ks: '2' }] } });
+            } else if (message.channel === 'spot.book_ticker' && message.event === 'subscribe') {
                 this.message({ channel: 'spot.book_ticker', event: 'update', result: { s: 'ETH_USDT', b: '100', B: '1', a: '101', A: '2' } });
             } else if (message.type === 'subscribe' && message.topic?.startsWith('/market/ticker:')) {
                 this.message({ type: 'message', topic: '/market/ticker:ETH-USDT', data: { bestBid: '100', bestBidSize: '1', bestAsk: '101', bestAskSize: '2' } });
@@ -47,7 +58,23 @@ globalThis.fetch = async (input, options) => {
     const url = new URL(input);
     requested.push(url.toString());
     let data;
-    if (url.hostname === 'api.binance.com' && url.pathname.endsWith('/time')) {
+    if (url.hostname === 'www.bitstamp.net' && url.pathname.endsWith('/markets/')) {
+        data = [{ market_symbol: 'ethusdt', market_type: 'SPOT', trading: 'Enabled', base_currency: 'ETH', counter_currency: 'USDT' }];
+    } else if (url.hostname === 'www.bitstamp.net' && url.pathname.endsWith('/currencies/')) {
+        data = [{ currency: 'ETH', type: 'crypto', deposit: 'Enabled', withdrawal: 'Enabled' }];
+    } else if (url.hostname === 'api.bitvavo.com' && url.pathname.endsWith('/markets')) {
+        data = [{ market: 'ETH-USDT', status: 'trading', base: 'ETH', quote: 'USDT' }];
+    } else if (url.hostname === 'api.bitvavo.com' && url.pathname.endsWith('/assets')) {
+        data = [{ symbol: 'ETH', withdrawalStatus: 'OK', depositStatus: 'OK' }];
+    } else if (url.hostname === 'api.crypto.com') {
+        data = { code: 0, result: { data: [{ symbol: 'ETH_USDT', inst_type: 'CCY_PAIR', tradable: true, product_type: 'DIGITAL_CURRENCIES', base_ccy: 'ETH', quote_ccy: 'USDT' }] } };
+    } else if (url.hostname === 'api.gemini.com') {
+        data = ['ethusdt'];
+    } else if (url.hostname === 'api-pub.bitfinex.com' && url.pathname.includes('pub:list:pair:exchange')) {
+        data = [['ETHUST'], [['UST', 'USDt']], []];
+    } else if (url.hostname === 'api-pub.bitfinex.com') {
+        data = [[['ETHEREUM', ['ETH']]], [['ETHEREUM', 1, 1]], []];
+    } else if (url.hostname === 'api.binance.com' && url.pathname.endsWith('/time')) {
         data = { serverTime: Date.now() };
     } else if (url.hostname === 'api.binance.com' && url.pathname.endsWith('/capital/config/getall')) {
         if (options.headers['X-MBX-APIKEY'] !== 'test-binance-key') throw new Error('Missing test API key');
@@ -116,8 +143,8 @@ console.log = (...values) => logs.push(values.join(' '));
 console.table = rows => tables.push(rows);
 
 await import('../../src/app.js');
-const deadline = Date.now() + 2000;
-while (Socket.instances.filter(socket => !socket.closed && socket.sent.length).length < 8) {
+const deadline = Date.now() + 5000;
+while (Socket.instances.filter(socket => !socket.closed && socket.sent.length).length < 13) {
     if (Date.now() > deadline) throw new Error('App did not connect to all fake exchanges');
     await new Promise(resolve => setTimeout(resolve, 5));
 }

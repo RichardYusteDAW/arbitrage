@@ -7,7 +7,7 @@ const formatOpportunity = opportunity => ({
     symbol: opportunity.symbol,
     buy: opportunity.buy,
     sell: opportunity.sell,
-    profitability: opportunity.profitability.toFixed(4) + '%',
+    profitability: opportunity.profitability.toFixed(2) + '%',
     maxVolumeUSD: opportunity.maxVolumeUSD?.toFixed(2) ?? null,
     profitUSD: opportunity.profitUSD?.toFixed(2) ?? null,
     withdraw: opportunity.withdraw ?? null,

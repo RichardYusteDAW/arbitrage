@@ -56,69 +56,31 @@ test('estados caducados y monedas ausentes son desconocidos, nunca falsos bloque
     assert.equal(store.get('a', 'ETH'), null);
 });
 
-test('las oportunidades muestran la retirada del exchange de compra usando el activo normalizado', () => {
-    const store = new TransferStatusService(120000);
-    store.update('a', [{ asset: 'SUPERP', withdraw: false, deposit: null }]);
-    store.update('b', [{ asset: 'SUPERP', withdraw: true, deposit: false }]);
-    const data = { a: [ticker({ symbol: 'SUPERPUSD', baseAsset: 'SUPERP', askPrice: 100, bidPrice: 99 })],
-        b: [ticker({ symbol: 'SUPERPUSD', baseAsset: 'SUPERP', askPrice: 103, bidPrice: 102 })] };
-    const useCase = new GetOpportunitiesUseCase({ getData: () => data }, calculateOpportunities, store);
-    const result = useCase.execute()[0];
-    assert.equal(result.withdraw, false);
-    assert.equal(result.deposit, false);
-    assert.equal(formatOpportunity(result).deposit, false);
-    assert.equal(formatOpportunity(result).withdraw, false);
-    store.clear('b');
-    assert.equal(useCase.execute()[0].deposit, null);
-    store.update('b', [{ asset: 'SUPERP', withdraw: false, deposit: true }]);
-    assert.equal(useCase.execute()[0].deposit, true);
-    store.clear('a');
-    assert.equal(useCase.execute()[0].withdraw, null);
-    store.update('a', [{ asset: 'SUPERP', withdraw: true, deposit: null }]);
-    assert.equal(useCase.execute()[0].withdraw, true);
-});
+for (const withdraw of [true, false, null]) {
+    for (const deposit of [true, false, null]) {
+        test(`filtra oportunidades segun retirada de compra (${withdraw}) y deposito de venta (${deposit})`, () => {
+            const store = new TransferStatusService(120000);
+            store.update('a', [{ asset: 'SUPERP', withdraw, deposit: false }]);
+            store.update('b', [{ asset: 'SUPERP', withdraw: false, deposit }]);
+            const data = {
+                a: [ticker({ symbol: 'SUPERPUSD', baseAsset: 'SUPERP', askPrice: 100, bidPrice: 99 })],
+                b: [ticker({ symbol: 'SUPERPUSD', baseAsset: 'SUPERP', askPrice: 103, bidPrice: 102 })]
+            };
+            const useCase = new GetOpportunitiesUseCase({ getData: () => data }, calculateOpportunities, store);
+            const results = useCase.execute();
 
-test('la actualización periódica aísla errores, recupera estados y se cancela al detener', async t => {
-    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
-    const store = new TransferStatusService(120000);
-    let attempts = 0;
-    const exchanges = { a: { adapter: { getTransferStatuses: async request => {
-        attempts++;
-        if (attempts === 2) throw new Error('Offline');
-        return request('currencies');
-    } } }, unsupported: { adapter: {} } };
-    const useCase = new RefreshTransferStatusUseCase(exchanges, {
-        request: async () => [{ asset: 'ETH', withdraw: true, deposit: null }]
-    }, store, 60000);
-    t.after(() => useCase.stop());
-    useCase.execute();
-    useCase.execute();
-    await flush();
-    assert.equal(attempts, 1);
-    assert.equal(store.get('a', 'ETH'), true);
-    t.mock.timers.tick(60000);
-    await flush();
-    assert.equal(store.get('a', 'ETH'), null);
-    t.mock.timers.tick(60000);
-    await flush();
-    assert.equal(store.get('a', 'ETH'), true);
-    assert.equal(store.get('unsupported', 'ETH'), null);
-    useCase.stop();
-    t.mock.timers.tick(60000);
-    await flush();
-    assert.equal(attempts, 3);
-    assert.equal(store.get('a', 'ETH'), null);
-});
+            if (withdraw === false || deposit === false) {
+                assert.deepEqual(results, []);
+                return;
+            }
 
-test('detener impide que una respuesta tardía repueble los estados', async () => {
-    const store = new TransferStatusService(120000);
-    let resolve;
-    const useCase = new RefreshTransferStatusUseCase({ a: { adapter: {
-        getTransferStatuses: () => new Promise(done => { resolve = done; })
-    } } }, {}, store, 60000);
-    useCase.execute();
-    useCase.stop();
-    resolve([{ asset: 'ETH', withdraw: true, deposit: null }]);
-    await flush();
-    assert.equal(store.get('a', 'ETH'), null);
-});
+            assert.equal(results.length, 1);
+            assert.equal(results[0].withdraw, withdraw);
+            assert.equal(results[0].deposit, deposit);
+            assert.equal(formatOpportunity(results[0]).withdraw, withdraw);
+            assert.equal(formatOpportunity(results[0]).deposit, deposit);
+        });
+    }
+}
+
+

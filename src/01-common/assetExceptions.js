@@ -1,6 +1,14 @@
 const KRAKEN_WEBSOCKET_ALIASES = { XBT: 'BTC', XDG: 'DOGE' };
 
 const ASSET_EXCEPTIONS = {
+    bitvavo: {
+        aliases: {
+            LUNA: 'LUNC',
+            LUNA2: 'LUNA',
+            EDGE: 'DEFINITIVE'
+        },
+        excludedAssets: []
+    },
     kraken: {
         aliases: {
             ...KRAKEN_WEBSOCKET_ALIASES,
@@ -9,25 +17,27 @@ const ASSET_EXCEPTIONS = {
             LIT: 'LITENTRY',
             LIGHTER: 'LIT',
             SUP: 'SUPERP',
-            EDGE: 'DEFINITIVE'
+            EDGE: 'DEFINITIVE',
+            ONE: 'ONECHAIN'
         },
         subscriptionAliases: KRAKEN_WEBSOCKET_ALIASES,
         excludedAssets: []
     },
     okx: {
-        aliases: {},
+        aliases: { AI: 'GENSYN' },
         excludedAssets: ['XTER']
     },
     kucoin: {
         aliases: {
             SUP: 'SUPERP',
             AIR: 'AIROUTER',
-            RWA: 'RWAINC'
+            RWA: 'RWAINC',
+            AI: 'GENSYN'
         },
         excludedAssets: []
     },
     bitget: {
-        aliases: { SUP: 'SUPERP' },
+        aliases: { SUP: 'SUPERP', AI: 'GENSYN' },
         excludedAssets: []
     },
     gateio: {
@@ -35,7 +45,8 @@ const ASSET_EXCEPTIONS = {
             EDGE: 'DEFINITIVE',
             SUP: 'SUPERTX',
             UP: 'UNITAS',
-            SUPERFORM: 'UP'
+            SUPERFORM: 'UP',
+            AIGENSYN: 'GENSYN'
         },
         excludedAssets: []
     }

@@ -15,7 +15,7 @@ class GetOpportunitiesUseCase {
             opportunity.withdraw = this.transferStatus.get(opportunity.buy, asset);
             opportunity.deposit = this.transferStatus.get(opportunity.sell, asset, 'deposit');
             return opportunity;
-        });
+        }).filter(opportunity => opportunity.withdraw !== false && opportunity.deposit !== false);
     }
 }
 

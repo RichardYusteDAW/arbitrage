@@ -34,6 +34,7 @@ class WebSocketConnectionService {
 
     clearConnectionTimers() {
         clearTimeout(this.connectionTimer);
+        clearTimeout(this.subscriptionTimer);
         clearInterval(this.watchdog);
         clearTimeout(this.pongTimer);
     }
@@ -89,13 +90,26 @@ class WebSocketConnectionService {
                 this.lastMessage = Date.now();
                 this.onState('conectado', null);
 
-                try {
-                    for (const subscription of this.config.adapter.subscriptions(this.pairs))
-                        socket.send(typeof subscription === 'string' ? subscription : JSON.stringify(subscription));
+                const subscribe = () => {
+                    if (!isActive())
+                        return;
 
-                } catch (error) {
-                    fail(error); return;
-                }
+                    try {
+                        for (const subscription of this.config.adapter.subscriptions(this.pairs))
+                            socket.send(typeof subscription === 'string' ? subscription : JSON.stringify(subscription));
+
+                    } catch (error) {
+                        fail(error);
+                    }
+                };
+
+                if (settings.subscriptionDelay)
+                    this.subscriptionTimer = setTimeout(subscribe, settings.subscriptionDelay);
+                else
+                    subscribe();
+
+                if (!isActive())
+                    return;
 
                 this.watchdog = setInterval(() => {
                     if (Date.now() - this.lastMessage > TIMING.inactivityTimeout)
@@ -130,6 +144,11 @@ class WebSocketConnectionService {
                         : JSON.parse(event.data);
 
                     if (message !== null) {
+                        const response = this.config.adapter.respondToMessage?.(message);
+
+                        if (response)
+                            socket.send(typeof response === 'string' ? response : JSON.stringify(response));
+
                         if (this.config.adapter.isPong?.(message))
                             clearTimeout(this.pongTimer);
 

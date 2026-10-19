@@ -1,3 +1,8 @@
+import bitstampAdapter from './03-domain/services/adapters/bitstamp.js';
+import bitvavoAdapter from './03-domain/services/adapters/bitvavo.js';
+import cryptocomAdapter from './03-domain/services/adapters/cryptocom.js';
+import geminiAdapter from './03-domain/services/adapters/gemini.js';
+import bitfinexAdapter from './03-domain/services/adapters/bitfinex.js';
 import gateioAdapter from './03-domain/services/adapters/gateio.js';
 import kucoinAdapter from './03-domain/services/adapters/kucoin.js';
 import bitgetAdapter from './03-domain/services/adapters/bitget.js';
@@ -9,6 +14,36 @@ import coinbaseAdapter from './03-domain/services/adapters/coinbase.js';
 import { ExchangeConfig } from './03-domain/models/exchange.js';
 
 const EXCHANGES = {
+  bitstamp: new ExchangeConfig({
+    websocketUrl: 'wss://ws.bitstamp.net',
+    pairsUrl: 'https://www.bitstamp.net/api/v2/markets/',
+    maxPairsPerConnection: 50,
+    adapter: bitstampAdapter
+  }),
+  bitvavo: new ExchangeConfig({
+    websocketUrl: 'wss://ws.bitvavo.com/v2/',
+    pairsUrl: 'https://api.bitvavo.com/v2/markets',
+    maxPairsPerConnection: 100,
+    adapter: bitvavoAdapter
+  }),
+  cryptocom: new ExchangeConfig({
+    websocketUrl: 'wss://stream.crypto.com/exchange/v1/market',
+    pairsUrl: 'https://api.crypto.com/exchange/v1/public/get-instruments',
+    maxPairsPerConnection: 100,
+    adapter: cryptocomAdapter
+  }),
+  gemini: new ExchangeConfig({
+    websocketUrl: 'wss://ws.gemini.com',
+    pairsUrl: 'https://api.gemini.com/v1/symbols',
+    maxPairsPerConnection: 100,
+    adapter: geminiAdapter
+  }),
+  bitfinex: new ExchangeConfig({
+    websocketUrl: 'wss://api-pub.bitfinex.com/ws/2',
+    pairsUrl: 'https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange,pub:map:currency:sym,pub:list:pair:securities',
+    maxPairsPerConnection: 25,
+    adapter: bitfinexAdapter
+  }),
   gateio: new ExchangeConfig({
     websocketUrl: 'wss://api.gateio.ws/ws/v4/',
     pairsUrl: 'https://api.gateio.ws/api/v4/spot/currency_pairs',

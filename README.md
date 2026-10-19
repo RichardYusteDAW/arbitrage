@@ -81,3 +81,21 @@ Define `BYBIT_API_KEY` y `BYBIT_API_SECRET` en `.env`, con una clave HMAC de lec
 Define `OKX_API_KEY`, `OKX_API_SECRET` y `OKX_API_PASSPHRASE` en `.env`. Se consulta la hora del servidor y se firma `GET /api/v5/asset/currencies` con HMAC-SHA256 y Base64. Las redes se agrupan por moneda y `canWd` y `canDep` determinan su disponibilidad. Si falta cualquiera de las tres credenciales o falla la consulta, `withdraw` es `null`. Se conserva la exclusi?n de XTER.
 
 Las consultas autenticadas de OKX usan por defecto `https://eea.okx.com` para la cuenta europea. Se puede configurar otro dominio oficial mediante `OKX_API_BASE_URL`. La API p?blica de precios mantiene su configuraci?n.
+
+## Nuevos exchanges
+
+La configuración incorpora Bitstamp, Bitvavo, Crypto.com (cryptocom), Gemini y Bitfinex, con los mismos casos de uso y servicios de conexiones que los anteriores.
+
+| Exchange | Datos de mercado | Depósitos y retiradas |
+|---|---|---|
+| Bitstamp | Snapshots de order_book; solo mercados SPOT habilitados | API pública currencies, por red |
+| Bitvavo | ticker24h completo cada segundo, con cantidades del mejor bid/ask | API pública assets |
+| Crypto.com | ticker por instrumento; solo CCY_PAIR de criptomonedas negociables | null hasta incorporar una fuente de disponibilidad |
+| Gemini | bookTicker sobre ws.gemini.com; se excluyen perpetuals y contratos de eventos | null hasta incorporar una fuente de disponibilidad |
+| Bitfinex | book P0/F0 de un nivel por lado; se excluyen pruebas, derivados y valores | Configuración pública de métodos y estado de wallets |
+
+Bitfinex conserva los identificadores nativos para las suscripciones y utiliza su mapa oficial de monedas para comparar, por ejemplo UST como USDT y DSH como DASH. Su ticker no se usa para calcular volumen porque suma cantidades de varios niveles. El libro de un nivel permite tomar solo la cantidad del mejor precio.
+
+Crypto.com espera un segundo antes de suscribirse y responde al heartbeat del servidor con el mismo id. El servicio WebSocket cancela esa suscripción pendiente al detenerse o desconectarse. Bitvavo y Gemini envían sus mensajes públicos de mantenimiento de conexión; Bitfinex utiliza ping.
+
+Referencias oficiales: [Bitstamp](https://www.bitstamp.net/api/), [Bitvavo ticker24h](https://docs.bitvavo.com/docs/websocket-api/ticker-24-hour-subscription/), [Crypto.com](https://exchange-developer.crypto.com/exchange/v1/docs/api/websocket-single-page/), [Gemini](https://developer.gemini.com/websocket/streams), [Bitfinex book](https://docs.bitfinex.com/reference/ws-public-books) y [Bitfinex configuración](https://docs.bitfinex.com/reference/rest-public-conf).
