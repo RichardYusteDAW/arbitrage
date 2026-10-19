@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
@@ -27,11 +28,16 @@ const bitgetAdapter = {
 
         return response.data.flatMap(coin => {
             const assets = normalizeAssets('bitget', coin.coin, '');
-            return assets ? [{ asset: assets.baseAsset,
-                withdraw: transferAvailability((coin.chains ?? []).map(chain =>
-                    chain.withdrawable === 'true' ? true : chain.withdrawable === 'false' ? false : null)),
-                deposit: transferAvailability((coin.chains ?? []).map(chain =>
-                    chain.rechargeable === 'true' ? true : chain.rechargeable === 'false' ? false : null)) }] : [];
+            const chains = coin.chains ?? [];
+            const networks = chains.map(chain => ({
+                name: chain.chain,
+                withdraw: chain.withdrawable === 'true' ? true : chain.withdrawable === 'false' ? false : null,
+                deposit: chain.rechargeable === 'true' ? true : chain.rechargeable === 'false' ? false : null
+            }));
+            const withdraw = transferAvailability(networks.map(network => network.withdraw));
+            const deposit = transferAvailability(networks.map(network => network.deposit));
+
+            return assets ? [{ asset: assets.baseAsset, withdraw, deposit, ...transferNetworks(networks) }] : [];
         });
     },
 

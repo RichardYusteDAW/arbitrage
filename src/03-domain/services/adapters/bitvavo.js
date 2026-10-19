@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import OrderBookService from '../orderBookService.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
@@ -27,6 +28,9 @@ const bitvavoAdapter = {
         return currencies.flatMap(coin => {
             const assets = normalizeAssets('bitvavo', coin.symbol, '');
             return assets ? [{ asset: assets.baseAsset,
+                ...transferNetworks((coin.networks ?? []).map(name => ({ name,
+                    withdraw: coin.networks.length === 1 || enabled(coin.withdrawalStatus) === false ? enabled(coin.withdrawalStatus) : null,
+                    deposit: coin.networks.length === 1 || enabled(coin.depositStatus) === false ? enabled(coin.depositStatus) : null }))),
                 withdraw: enabled(coin.withdrawalStatus), deposit: enabled(coin.depositStatus) }] : [];
         });
     },

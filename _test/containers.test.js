@@ -24,7 +24,7 @@ test('los contenedores comparten instancias y las consultas y parada usan las mi
     quotes.update('binance', [ticker()]);
     quotes.update('kraken', [ticker({ askPrice: 103, bidPrice: 102 })]);
     assert.equal(getMarketStatusUseCase().execute().kraken.quotes, 1);
-    assert.equal(getOpportunitiesUseCase().execute()[0].profitability, 2);
+    assert.ok(Math.abs(getOpportunitiesUseCase().execute()[0].profitability - 1.798 / 100.1 * 100) < 1e-10);
     stop.execute();
     assert.equal(getMarketStatusUseCase().execute().kraken.quotes, 0);
     assert.deepEqual(getOpportunitiesUseCase().execute(), []);

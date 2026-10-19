@@ -81,9 +81,9 @@ globalThis.fetch = async (input, options) => {
         data = [{ coin: 'ETH', withdrawAllEnable: true, networkList: [{ withdrawEnable: true, depositEnable: true }] }];
     } else if (url.hostname === 'api.binance.com' && url.pathname.endsWith('exchangeInfo')) {
         data = { symbols: [{ symbol: 'ETHUSDT', baseAsset: 'ETH', status: 'TRADING' }] };
-    } else if (url.hostname === 'api.kraken.com' && ['/funding/v1/assets/withdraw', '/funding/v1/assets/deposit'].includes(url.pathname)) {
+    } else if (url.hostname === 'api.kraken.com' && ['/funding/v1/methods/withdraw', '/funding/v1/methods/deposit'].includes(url.pathname)) {
         if (options.headers['API-Key'] !== 'test-kraken-key') throw new Error('Missing Kraken test key');
-        data = { currency: [{ name: 'ETH' }] };
+        data = { methods: [{ asset: { class: 'currency', name: 'ETH' } }] };
     } else if (url.hostname === 'api.kraken.com' && url.pathname.endsWith('/Assets')) {
         data = { error: [], result: { XETH: { altname: 'ETH', status: 'enabled' } } };
     } else if (url.hostname === 'api.kraken.com' && url.pathname.endsWith('AssetPairs')) {

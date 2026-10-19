@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import { createHmac } from 'node:crypto';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
@@ -62,12 +63,13 @@ const okxAdapter = {
                 continue;
 
             const networks = networksByAsset.get(assets.baseAsset) ?? [];
-            networks.push({ withdraw: coin.canWd, deposit: coin.canDep });
+            networks.push({ name: coin.chain?.replace(coin.ccy + '-', ''), withdraw: coin.canWd, deposit: coin.canDep });
             networksByAsset.set(assets.baseAsset, networks);
         }
 
         return [...networksByAsset].map(([asset, states]) => ({
             asset,
+            ...transferNetworks(states),
             withdraw: transferAvailability(states.map(state => state.withdraw)),
             deposit: transferAvailability(states.map(state => state.deposit))
         }));

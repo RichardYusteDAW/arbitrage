@@ -2,16 +2,38 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateOpportunities } from '../src/03-domain/helpers/calculations.js';
 import { ticker } from './fixtures.js';
-import { Opportunity } from '../src/03-domain/models/opportunity.js';
+
+const assertClose = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, actual + ' != ' + expected);
 
 const inputs = (buy = {}, sell = {}, conversions = [ticker()]) => ({
     buyer: [ticker({ symbol: 'ETHBTC', askPrice: 10, bidPrice: 9, ...buy }), ...conversions],
     seller: [ticker({ symbol: 'ETHBTC', askPrice: 12, bidPrice: 11, ...sell })]
 });
 
+test('descarta margenes que no cubren el 0,1% de compra y el 0,1% de venta', () => {
+    assert.deepEqual(calculateOpportunities(inputs({ askPrice: 100 }, { bidPrice: 100.2 })), []);
+});
+
+test('deja de consumir el libro cuando el siguiente nivel pierde dinero tras comisiones', () => {
+    const [result] = calculateOpportunities({
+        buyer: [ticker({ asks: [[100, 1], [100.9, 10]] })],
+        seller: [ticker({ bids: [[101, 20]] })]
+    });
+    assert.equal(result.quantity, 1);
+    assertClose(result.maxVolumeUSD, 100.1);
+    assertClose(result.profitUSD, 0.799);
+    assertClose(result.profitability, 0.799 / 100.1 * 100);
+});
+
 test('calcula rentabilidad, volumen y beneficio sin redondear los datos internos', () => {
     const [result] = calculateOpportunities(inputs({ askPrice: '10', askQty: '2' }, { bidQty: '0.5' }));
-    assert.deepEqual(result, new Opportunity({ symbol: 'ETHBTC', buy: 'buyer', sell: 'seller', profitability: 10, quantity: 0.5, maxVolumeUSD: 50, profitUSD: 5 }));
+    assert.equal(result.symbol, 'ETHBTC');
+    assert.equal(result.buy, 'buyer');
+    assert.equal(result.sell, 'seller');
+    assert.equal(result.quantity, 0.5);
+    assertClose(result.maxVolumeUSD, 50.05);
+    assertClose(result.profitUSD, 4.895);
+    assertClose(result.profitability, 4.895 / 50.05 * 100);
 });
 
 test('comprueba ambos sentidos y usa el precio USD del exchange de compra', () => {
@@ -20,8 +42,8 @@ test('comprueba ambos sentidos y usa el precio USD del exchange de compra', () =
     const [result] = calculateOpportunities(data);
     assert.equal(result.buy, 'seller');
     assert.equal(result.sell, 'buyer');
-    assert.equal(result.maxVolumeUSD, 150);
-    assert.equal(result.profitUSD, 15);
+    assertClose(result.maxVolumeUSD, 150 * 1.001);
+    assertClose(result.profitUSD, 14.685);
 });
 
 test('compara tres exchanges sin compararlos consigo mismos', () => {
@@ -48,11 +70,11 @@ for (const invalid of [0, -1, NaN, Infinity, -Infinity, undefined, 'invalid']) {
 
 test('USDT tiene prioridad sobre USDC independientemente del orden de entrada', () => {
     const data = inputs({}, {}, [ticker({ symbol: 'ETHUSDC', askPrice: 200 }), ticker({ askPrice: 100 })]);
-    assert.equal(calculateOpportunities(data)[0].maxVolumeUSD, 100);
+    assertClose(calculateOpportunities(data)[0].maxVolumeUSD, 100 * 1.001);
 });
 
 test('utiliza USDC si faltan USD y USDT y devuelve null sin ninguna conversi?n', () => {
-    assert.equal(calculateOpportunities(inputs({}, {}, [ticker({ symbol: 'ETHUSDC', askPrice: 200 })]))[0].maxVolumeUSD, 200);
+    assertClose(calculateOpportunities(inputs({}, {}, [ticker({ symbol: 'ETHUSDC', askPrice: 200 })]))[0].maxVolumeUSD, 200 * 1.001);
     const [result] = calculateOpportunities(inputs({}, {}, []));
     assert.equal(result.maxVolumeUSD, null);
     assert.equal(result.profitUSD, null);
@@ -76,7 +98,7 @@ for (const invalid of [0, -1, NaN, undefined, null]) {
 
 test('descarta un mínimo infinito y obtiene baseAsset del otro exchange si hace falta', () => {
     assert.equal(calculateOpportunities(inputs({ askQty: Infinity }, { bidQty: Infinity }))[0].maxVolumeUSD, null);
-    assert.equal(calculateOpportunities(inputs({ baseAsset: undefined }))[0].maxVolumeUSD, 100);
+    assertClose(calculateOpportunities(inputs({ baseAsset: undefined }))[0].maxVolumeUSD, 100 * 1.001);
 });
 
 test('no modifica el objeto ni los arrays de entrada', () => {
@@ -92,15 +114,15 @@ test('USD tiene prioridad sobre USDT y USDC independientemente del orden de entr
         ticker({ askPrice: 100 }), ticker({ symbol: 'ETHUSD', askPrice: 150 })];
     for (const ordered of [conversions, [...conversions].reverse()]) {
         const [result] = calculateOpportunities(inputs({}, {}, ordered));
-        assert.equal(result.maxVolumeUSD, 150);
-        assert.equal(result.profitUSD, 15);
+        assertClose(result.maxVolumeUSD, 150 * 1.001);
+        assertClose(result.profitUSD, 14.685);
     }
 });
 
 test('un par cotizado en USD permite calcular su volumen sin USDT ni USDC', () => {
     const [result] = calculateOpportunities(inputs({ symbol: 'ETHUSD' }, { symbol: 'ETHUSD' }, []));
-    assert.equal(result.maxVolumeUSD, 10);
-    assert.equal(result.profitUSD, 1);
+    assertClose(result.maxVolumeUSD, 10 * 1.001);
+    assertClose(result.profitUSD, 0.979);
 });
 
 test('si el par USD existe con precio inv?lido devuelve null como las otras conversiones', () => {
@@ -117,9 +139,9 @@ test('recorre ambos libros, agota niveles y se detiene antes del margen negativo
     const before = structuredClone(data);
     const result = calculateOpportunities(data).find(item => item.buy === 'buyer');
     assert.equal(result.quantity, 5);
-    assert.equal(result.maxVolumeUSD, 503);
-    assert.equal(result.profitUSD, 14);
-    assert.equal(result.profitability, 14 / 503 * 100);
+    assertClose(result.maxVolumeUSD, 503 * 1.001);
+    assertClose(result.profitUSD, 12.98);
+    assertClose(result.profitability, 12.98 / 503.503 * 100);
     assert.deepEqual(structuredClone(data), before);
 });
 
@@ -129,9 +151,9 @@ test('el volumen usa el coste real de todos los niveles y la rentabilidad sus pr
         seller: [ticker({ bids: [[120, 5]] })]
     });
     assert.equal(result.quantity, 5);
-    assert.equal(result.maxVolumeUSD, 530);
-    assert.equal(result.profitUSD, 70);
-    assert.equal(result.profitability, 70 / 530 * 100);
+    assertClose(result.maxVolumeUSD, 530 * 1.001);
+    assertClose(result.profitUSD, 68.87);
+    assertClose(result.profitability, 68.87 / 530.53 * 100);
 });
 
 test('la cantidad queda limitada por el lado con menos liquidez rentable', () => {
@@ -140,8 +162,8 @@ test('la cantidad queda limitada por el lado con menos liquidez rentable', () =>
         seller: [ticker({ bids: [[110, 1], [105, 2], [100, 20]] })]
     });
     assert.equal(result.quantity, 3);
-    assert.equal(result.maxVolumeUSD, 300);
-    assert.equal(result.profitUSD, 20);
+    assertClose(result.maxVolumeUSD, 300 * 1.001);
+    assertClose(result.profitUSD, 19.38);
 });
 
 test('la cantidad se calcula en EUR aunque falte la conversion a dolares', () => {
@@ -155,6 +177,6 @@ test('la cantidad se calcula en EUR aunque falte la conversion a dolares', () =>
     assert.equal(withoutConversion.profitUSD, null);
     data.buyer.push(ticker({ symbol: 'EURUSD', baseAsset: 'EUR', askPrice: 1.1, bidPrice: 1.09 }));
     const [converted] = calculateOpportunities(data);
-    assert.ok(Math.abs(converted.maxVolumeUSD - 583) < 1e-10);
-    assert.ok(Math.abs(converted.profitUSD - 77) < 1e-10);
+    assert.ok(Math.abs(converted.maxVolumeUSD - 583.583) < 1e-10);
+    assert.ok(Math.abs(converted.profitUSD - 75.757) < 1e-10);
 });

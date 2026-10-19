@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import OrderBookService from '../orderBookService.js';
 import { createHash, createHmac } from 'node:crypto';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
@@ -35,26 +36,51 @@ const krakenAdapter = {
         if (!apiKey || !apiSecret)
             return [];
 
+        const methods = new Map();
         const getAvailableAssets = async direction => {
-            const timestamp = BigInt(Date.now()) * 1000n;
-            lastNonce = timestamp > lastNonce ? timestamp : lastNonce + 1n;
-            const nonce = String(lastNonce);
-            const path = '/funding/v1/assets/' + direction + '?asset_class=currency';
-            const digest = createHash('sha256').update(nonce).digest();
-            const signature = createHmac('sha512', Buffer.from(apiSecret, 'base64'))
-                .update(path).update(digest).digest('base64');
-            const funding = await request('https://api.kraken.com' + path, {
-                headers: { 'API-Key': apiKey, 'API-Nonce': nonce, 'API-Sign': signature }
-            });
+            const available = new Set();
+            const cursors = new Set();
+            let cursor;
 
-            if (!Array.isArray(funding.currency))
-                throw new Error('Kraken funding assets request failed');
+            do {
+                const timestamp = BigInt(Date.now()) * 1000n;
+                lastNonce = timestamp > lastNonce ? timestamp : lastNonce + 1n;
+                const nonce = String(lastNonce);
+                const query = new URLSearchParams(cursor ? { cursor } : { limit: '10000' });
+                const path = '/funding/v1/methods/' + direction + '?' + query;
+                const digest = createHash('sha256').update(nonce).digest();
+                const signature = createHmac('sha512', Buffer.from(apiSecret, 'base64'))
+                    .update(path).update(digest).digest('base64');
+                const funding = await request('https://api.kraken.com' + path, {
+                    headers: { 'API-Key': apiKey, 'API-Nonce': nonce, 'API-Sign': signature }
+                });
 
-            return new Set(funding.currency.flatMap(coin => {
-                const assets = normalizeAssets('kraken', coin.name, '');
+                if (!Array.isArray(funding.methods))
+                    throw new Error('Kraken funding assets request failed');
 
-                return assets ? [assets.baseAsset] : [];
-            }));
+                for (const method of funding.methods) {
+                    if (method.asset?.class !== 'currency')
+                        continue;
+
+                    const assets = normalizeAssets('kraken', method.asset.name, '');
+
+                    if (!assets)
+                        continue;
+
+                    available.add(assets.baseAsset);
+                    const entries = methods.get(assets.baseAsset) ?? [];
+                    entries.push({ name: method.network?.network_name, direction });
+                    methods.set(assets.baseAsset, entries);
+                }
+                cursor = funding.next_cursor;
+
+                if (cursor && cursors.has(cursor))
+                    throw new Error('Kraken funding pagination repeated');
+
+                cursors.add(cursor);
+            } while (cursor);
+
+            return available;
         };
 
         const availableWithdraw = await getAvailableAssets('withdraw');
@@ -87,7 +113,13 @@ const krakenAdapter = {
             else if (['enabled', 'deposit_only'].includes(coin.status))
                 deposit = availableDeposit.has(assets.baseAsset);
 
-            return [{ asset: assets.baseAsset, withdraw, deposit }];
+            const entries = methods.get(assets.baseAsset) ?? [];
+            const names = [...new Set(entries.map(entry => entry.name).filter(Boolean))];
+            return [{ asset: assets.baseAsset, withdraw, deposit,
+                ...transferNetworks(names.map(name => ({ name,
+                    withdraw: withdraw === null ? null : withdraw && entries.some(entry => entry.name === name && entry.direction === 'withdraw'),
+                    deposit: deposit === null ? null : deposit && entries.some(entry => entry.name === name && entry.direction === 'deposit')
+                }))) }];
         });
     },
 

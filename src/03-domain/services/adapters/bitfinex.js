@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import OrderBookService from '../orderBookService.js';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
@@ -44,12 +45,12 @@ const bitfinexAdapter = {
                     continue;
 
                 const entries = currencies.get(assets.baseAsset) ?? [];
-                entries.push(networks.get(method) ?? {});
+                entries.push({ name: method, ...networks.get(method) });
                 currencies.set(assets.baseAsset, entries);
             }
         }
 
-        return [...currencies].map(([asset, entries]) => ({ asset,
+        return [...currencies].map(([asset, entries]) => ({ asset, ...transferNetworks(entries),
             withdraw: transferAvailability(entries.map(entry => entry.withdraw)),
             deposit: transferAvailability(entries.map(entry => entry.deposit)) }));
     },

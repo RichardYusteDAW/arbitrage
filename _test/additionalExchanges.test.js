@@ -139,8 +139,9 @@ test('Bitfinex agrupa metodos de transferencia y conserva desconocidos', async (
         [['ETHEREUM', ['ETH', 'UST']], ['TRON', ['UST']], ['OTHER', ['MISSING']]],
         [['ETHEREUM', 0, 1], ['TRON', 1, 0]], [['UST', 'USDt']]
     ]);
-    assert.deepEqual(statuses, [{ asset: 'ETH', deposit: false, withdraw: true },
-        { asset: 'USDT', deposit: true, withdraw: true }, { asset: 'MISSING', deposit: null, withdraw: null }]);
+    assert.deepEqual(statuses, [{ asset: 'ETH', deposit: false, withdraw: true, networks: [{ id: 'ethereum', name: 'ETHEREUM', deposit: false, withdraw: true }] },
+        { asset: 'USDT', deposit: true, withdraw: true, networks: [{ id: 'ethereum', name: 'ETHEREUM', deposit: false, withdraw: true }, { id: 'tron', name: 'TRON', deposit: true, withdraw: false }] },
+        { asset: 'MISSING', deposit: null, withdraw: null, networks: [{ id: null, name: 'OTHER', deposit: null, withdraw: null }] }]);
     await assert.rejects(bitfinex.getTransferStatuses(async () => []), /currencies/);
 });
 

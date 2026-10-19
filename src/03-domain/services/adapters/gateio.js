@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
@@ -27,14 +28,17 @@ const gateioAdapter = {
 
         return response.flatMap(coin => {
             const assets = normalizeAssets('gateio', coin.currency, '');
-            const chains = coin.chains?.length ? coin.chains : [coin];
-            const withdraw = transferAvailability(chains.map(chain =>
-                chain.withdraw_disabled === true || chain.withdraw_delayed === true ? false
-                    : chain.withdraw_disabled === false ? true : null));
-            const deposit = transferAvailability(chains.map(chain =>
-                chain.deposit_disabled === true ? false : chain.deposit_disabled === false ? true : null));
+            const chains = coin.chains?.length ? coin.chains : [{ ...coin, name: coin.chain }];
+            const networks = chains.map(chain => ({
+                name: chain.name,
+                withdraw: chain.withdraw_disabled === true || chain.withdraw_delayed === true ? false
+                    : chain.withdraw_disabled === false ? true : null,
+                deposit: chain.deposit_disabled === true ? false : chain.deposit_disabled === false ? true : null
+            }));
+            const withdraw = transferAvailability(networks.map(network => network.withdraw));
+            const deposit = transferAvailability(networks.map(network => network.deposit));
 
-            return assets ? [{ asset: assets.baseAsset, withdraw, deposit }] : [];
+            return assets ? [{ asset: assets.baseAsset, withdraw, deposit, ...transferNetworks(networks) }] : [];
         });
     },
 

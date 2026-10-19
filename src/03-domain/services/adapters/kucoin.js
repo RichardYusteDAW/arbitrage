@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
@@ -43,9 +44,16 @@ const kucoinAdapter = {
 
         return response.data.flatMap(coin => {
             const assets = normalizeAssets('kucoin', coin.currency, '');
-            return assets ? [{ asset: assets.baseAsset,
-                withdraw: transferAvailability((coin.chains ?? []).map(chain => chain.isWithdrawEnabled)),
-                deposit: transferAvailability((coin.chains ?? []).map(chain => chain.isDepositEnabled)) }] : [];
+            const chains = coin.chains ?? [];
+            const networks = chains.map(chain => ({
+                name: chain.chainId,
+                withdraw: chain.isWithdrawEnabled,
+                deposit: chain.isDepositEnabled
+            }));
+            const withdraw = transferAvailability(networks.map(network => network.withdraw));
+            const deposit = transferAvailability(networks.map(network => network.deposit));
+
+            return assets ? [{ asset: assets.baseAsset, withdraw, deposit, ...transferNetworks(networks) }] : [];
         });
     },
 

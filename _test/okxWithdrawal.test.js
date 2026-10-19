@@ -30,7 +30,9 @@ test('OKX firma con hora ISO y agrupa la disponibilidad por moneda entre redes',
         ] };
     }, credentials);
 
-    assert.deepEqual(statuses, [{ asset: 'ETH', withdraw: true, deposit: null }, { asset: 'CLOSED', withdraw: false, deposit: false },
+    assert.deepEqual(statuses, [{ asset: 'ETH', withdraw: true, deposit: null, networks: [
+        { id: 'ethereum', name: 'Ethereum', withdraw: false, deposit: false },
+        { id: 'arbitrum', name: 'Arbitrum One', withdraw: true, deposit: null }] }, { asset: 'CLOSED', withdraw: false, deposit: false },
         { asset: 'UNKNOWN', withdraw: null, deposit: null }, { asset: 'INCOMPLETE', withdraw: null, deposit: null }]);
 });
 

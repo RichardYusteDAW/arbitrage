@@ -1,5 +1,7 @@
 import { Opportunity } from '../models/opportunity.js';
 
+const TAKER_FEE = 0.001;
+
 const calculateProfitability = (buyPrice, sellPrice) => {
     buyPrice = Number(buyPrice);
     sellPrice = Number(sellPrice);
@@ -33,7 +35,7 @@ const matchOrderBooks = (buy, sell) => {
         const askPrice = Number(asks[askIndex][0]);
         const bidPrice = Number(bids[bidIndex][0]);
 
-        if (bidPrice <= askPrice)
+        if (bidPrice * (1 - TAKER_FEE) <= askPrice * (1 + TAKER_FEE))
             break;
 
         const amount = Math.min(askRemaining, bidRemaining);
@@ -53,7 +55,7 @@ const matchOrderBooks = (buy, sell) => {
     if (!(quantity > 0) || ![quantity, cost, revenue].every(Number.isFinite))
         return null;
 
-    return { quantity, cost, revenue };
+    return { quantity, cost: cost * (1 + TAKER_FEE), revenue: revenue * (1 - TAKER_FEE) };
 };
 
 const getDollarRate = (ticker, baseAsset, market) => {
@@ -82,7 +84,8 @@ const createExchangeMaps = exchangesData => new Map(
 );
 
 const calculateOpportunity = (buyExchangeName, sellExchangeName, buyTickerData, sellTickerData, buyTickers) => {
-    const profitability = calculateProfitability(buyTickerData.askPrice, sellTickerData.bidPrice);
+    const profitability = calculateProfitability(Number(buyTickerData.askPrice) * (1 + TAKER_FEE),
+        Number(sellTickerData.bidPrice) * (1 - TAKER_FEE));
 
     if (!(profitability > 0))
         return null;

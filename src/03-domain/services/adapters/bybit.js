@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import OrderBookService from '../orderBookService.js';
 import { createHmac } from 'node:crypto';
 import transferAvailability from '../../../01-common/transferAvailability.js';
@@ -49,13 +50,17 @@ const bybitAdapter = {
         }
         return response.result.rows.flatMap(coin => {
             const assets = normalizeAssets('bybit', coin.coin, '');
-            const withdraw = transferAvailability((coin.chains ?? []).map(chain =>
-                chain.withdrawFee === '' || chain.chainWithdraw === '0' ? false
-                    : chain.chainWithdraw === '1' ? true : null));
-            const deposit = transferAvailability((coin.chains ?? []).map(chain =>
-                chain.chainDeposit === '1' ? true : chain.chainDeposit === '0' ? false : null));
+            const chains = coin.chains ?? [];
+            const networks = chains.map(chain => ({
+                name: chain.chain,
+                withdraw: chain.withdrawFee === '' || chain.chainWithdraw === '0' ? false
+                    : chain.chainWithdraw === '1' ? true : null,
+                deposit: chain.chainDeposit === '1' ? true : chain.chainDeposit === '0' ? false : null
+            }));
+            const withdraw = transferAvailability(networks.map(network => network.withdraw));
+            const deposit = transferAvailability(networks.map(network => network.deposit));
 
-            return assets ? [{ asset: assets.baseAsset, withdraw, deposit }] : [];
+            return assets ? [{ asset: assets.baseAsset, withdraw, deposit, ...transferNetworks(networks) }] : [];
         });
     },
 

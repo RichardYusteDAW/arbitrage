@@ -38,7 +38,7 @@ for (const [columns, rows] of [[160, 24], [80, 15], [40, 8]]) {
         const writes = [];
         let clears = 0;
         t.mock.method(console, 'clear', () => { clears++; });
-        const input = Array.from({ length: 35 }, (_, index) => opportunity({ profitability: index + 1 }));
+        const input = Array.from({ length: 35 }, (_, index) => opportunity({ profitability: index + 1, profitUSD: index + 1 }));
         mockTerminal(t, true);
 
         for (const [name, value] of Object.entries({ columns, rows })) {
@@ -71,7 +71,7 @@ for (const [columns, rows] of [[160, 24], [80, 15], [40, 8]]) {
         if (rows === 24) {
             assert.ok(writes[0].includes('35,00%'));
             const dataRow = lines.find(line => /35,00%/.test(line));
-            assert.match(dataRow, /^\u2502 0 \u2502/);
+            assert.match(dataRow, /^\u2502\s+ETHUSDT\s+\u2502/);
 
             if (process.env.NO_COLOR === undefined)
                 assert.ok(writes[0].includes('\x1b[32m'));

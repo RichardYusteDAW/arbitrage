@@ -75,7 +75,7 @@ test('inicia una sola vez, suscribe cada conexión y produce oportunidades con f
     socket('two').message(ticker({ askPrice: 103, bidPrice: 102 }));
     assert.equal(service.getData().one[0].receivedAt, 100000);
     assert.equal(service.getStatus().two.quotes, 1);
-    assert.equal(calculateOpportunities(service.getData())[0].profitUSD, 2);
+    assert.ok(Math.abs(calculateOpportunities(service.getData())[0].profitUSD - 1.798) < 1e-10);
 });
 
 test('desconectar retira datos y reconectar crea un parser nuevo sin reutilizar cotizaciones', async t => {
@@ -96,7 +96,7 @@ test('desconectar retira datos y reconectar crea un parser nuevo sin reutilizar 
     oldSocket.message(ticker({ bidPrice: 500 }));
     assert.deepEqual(service.getData().two, []);
     socket('two').message(ticker({ bidPrice: 103, askPrice: 104 }));
-    assert.equal(calculateOpportunities(service.getData())[0].profitUSD, 3);
+    assert.ok(Math.abs(calculateOpportunities(service.getData())[0].profitUSD - 2.797) < 1e-10);
 });
 
 test('reconexiones consecutivas usan una espera creciente', async t => {

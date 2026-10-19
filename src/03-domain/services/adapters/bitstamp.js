@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
@@ -29,6 +30,7 @@ const bitstampAdapter = {
             const assets = normalizeAssets('bitstamp', coin.currency, '');
             const networks = coin.networks?.length ? coin.networks : [coin];
             return assets ? [{ asset: assets.baseAsset,
+                ...transferNetworks(networks.map(network => ({ name: network.network, withdraw: enabled(network.withdrawal), deposit: enabled(network.deposit) }))),
                 withdraw: coin.withdrawal === 'Disabled' ? false : transferAvailability(networks.map(network => enabled(network.withdrawal))),
                 deposit: coin.deposit === 'Disabled' ? false : transferAvailability(networks.map(network => enabled(network.deposit))) }] : [];
         });

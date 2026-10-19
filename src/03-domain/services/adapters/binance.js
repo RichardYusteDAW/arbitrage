@@ -1,3 +1,4 @@
+import transferNetworks from '../../../01-common/transferNetworks.js';
 import { createHmac } from 'node:crypto';
 import transferAvailability from '../../../01-common/transferAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
@@ -38,12 +39,16 @@ const binanceAdapter = {
 
         return response.flatMap(coin => {
             const assets = normalizeAssets('binance', coin.coin, '');
-            const withdraw = coin.withdrawAllEnable === false ? false
-                : transferAvailability((coin.networkList ?? []).map(network => network.withdrawEnable));
-            const deposit = coin.depositAllEnable === false ? false
-                : transferAvailability((coin.networkList ?? []).map(network => network.depositEnable));
+            const chains = coin.networkList ?? [];
+            const networks = chains.map(chain => ({
+                name: chain.network,
+                withdraw: chain.withdrawEnable,
+                deposit: chain.depositEnable
+            }));
+            const withdraw = coin.withdrawAllEnable === false ? false : transferAvailability(networks.map(network => network.withdraw));
+            const deposit = coin.depositAllEnable === false ? false : transferAvailability(networks.map(network => network.deposit));
 
-            return assets ? [{ asset: assets.baseAsset, withdraw, deposit }] : [];
+            return assets ? [{ asset: assets.baseAsset, withdraw, deposit, ...transferNetworks(networks) }] : [];
         });
     },
 

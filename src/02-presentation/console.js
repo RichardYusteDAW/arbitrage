@@ -55,7 +55,8 @@ const fitLine = (line, columns) => {
 const renderConsole = (opportunities, exchangeStatuses) => {
     console.clear();
 
-    const sortedOpportunities = [...opportunities].sort((a, b) => b.profitability - a.profitability);
+    const sortedOpportunities = [...opportunities].sort((a, b) =>
+        (b.profitUSD ?? -Infinity) - (a.profitUSD ?? -Infinity));
 
     const interactive = process.stdout.isTTY;
 
@@ -110,10 +111,9 @@ const renderConsole = (opportunities, exchangeStatuses) => {
             let label = header ? line.replace('(index)', '       ') : line;
 
             if (index >= headerLines) {
-                const indexWidth = String(Math.max(0, opportunityRows.length - 1)).length;
                 label = label
-                    .replace(/^([\u250c\u251c\u2514])\u2500+(?=[\u252c\u253c\u2534])/, (_, corner) => corner + '\u2500'.repeat(indexWidth + 2))
-                    .replace(/^\u2502([^\u2502]*)\u2502/, (_, cell) => '\u2502 ' + cell.trim().padEnd(indexWidth) + ' \u2502');
+                    .replace(/^([\u250c\u251c\u2514])\u2500+[\u252c\u253c\u2534]/, '$1')
+                    .replace(/^\u2502[^\u2502]*\u2502/, '\u2502');
             }
             const text = header
                 ? label.replace(/[^\s\u2502]+/gu, value => colorText(value, 'blue'))
