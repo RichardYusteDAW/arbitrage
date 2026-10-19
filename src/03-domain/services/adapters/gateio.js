@@ -1,3 +1,4 @@
+import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -16,6 +17,19 @@ const gateioAdapter = {
                 const assets = normalizeAssets('gateio', pair.base, pair.quote);
                 return assets ? [new ExchangePair({ id: pair.id, ...assets })] : [];
             });
+    },
+
+    async getWithdrawalStatuses(request) {
+        const response = await request('https://api.gateio.ws/api/v4/spot/currencies');
+        if (!Array.isArray(response)) throw new Error(response.message || 'Gate.io currencies failed');
+        return response.flatMap(coin => {
+            const assets = normalizeAssets('gateio', coin.currency, '');
+            const chains = coin.chains?.length ? coin.chains : [coin];
+            const withdraw = withdrawalAvailability(chains.map(chain =>
+                chain.withdraw_disabled === true || chain.withdraw_delayed === true ? false
+                    : chain.withdraw_disabled === false ? true : null));
+            return assets ? [{ asset: assets.baseAsset, withdraw }] : [];
+        });
     },
 
     subscriptions(pairs) {

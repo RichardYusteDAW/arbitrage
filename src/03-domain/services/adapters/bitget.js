@@ -1,3 +1,4 @@
+import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -15,6 +16,17 @@ const bitgetAdapter = {
                 const assets = normalizeAssets('bitget', pair.baseCoin, pair.quoteCoin);
                 return assets ? [new ExchangePair({ id: pair.symbol, ...assets })] : [];
             });
+    },
+
+    async getWithdrawalStatuses(request) {
+        const response = await request('https://api.bitget.com/api/v2/spot/public/coins');
+        if (response.code !== '00000') throw new Error(response.msg || 'Bitget currencies failed');
+        return response.data.flatMap(coin => {
+            const assets = normalizeAssets('bitget', coin.coin, '');
+            return assets ? [{ asset: assets.baseAsset,
+                withdraw: withdrawalAvailability((coin.chains ?? []).map(chain =>
+                    chain.withdrawable === 'true' ? true : chain.withdrawable === 'false' ? false : null)) }] : [];
+        });
     },
 
     subscriptions(pairs) {

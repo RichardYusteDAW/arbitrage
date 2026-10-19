@@ -57,3 +57,9 @@ Los constructores unifican los campos. La conversión de los mensajes externos s
 ## Pruebas
 
 Todos los tests y sus fixtures están en `_test/`. Se ejecutan con `npm test`, sin conexiones a servicios externos. Cubren los cálculos, los adaptadores, los modelos, el libro de órdenes, las peticiones, las cotizaciones, las conexiones y el arranque y parada de la aplicación.
+
+## Disponibilidad de retiradas
+
+La columna `withdraw` indica si el activo base puede retirarse del exchange de compra por al menos una red. `true`: alguna red habilitada; `false`: todas las redes conocidas bloqueadas; `null`: estado desconocido, consulta fallida o caducada. No comprueba dep?sitos en destino, compatibilidad entre redes ni restricciones de la cuenta.
+
+Se consulta una lista completa de monedas por exchange al arrancar y cada minuto (`withdrawalRefreshInterval`), sin bloquear las cotizaciones. KuCoin, Bitget y Gate.io disponen de adaptadores para sus endpoints p?blicos. Los dem?s exchanges muestran `null` hasta disponer de una fuente adecuada. Los estados se normalizan con el mismo cat?logo de excepciones que los pares.

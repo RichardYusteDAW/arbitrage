@@ -18,7 +18,7 @@ const opportunity = (changes = {}) => new Opportunity({ symbol: 'ETHUSDT', buy: 
 test('presentación formatea importes y porcentajes sin modificar el modelo ni sustituir null', () => {
     const input = opportunity();
     assert.deepEqual(formatOpportunity(input), { symbol: 'ETHUSDT', buy: 'a', sell: 'b', profitability: '1.2346%',
-        maxVolumeUSD: '100.12', profitUSD: '1.23' });
+        maxVolumeUSD: '100.12', profitUSD: '1.23', withdraw: null });
     assert.equal(input.profitability, 1.234567);
     assert.equal(formatOpportunity(opportunity({ maxVolumeUSD: null, profitUSD: null })).profitUSD, null);
     assert.equal(formatOpportunity(opportunity({ profitUSD: 0 })).profitUSD, '0.00');

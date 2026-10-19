@@ -1,3 +1,4 @@
+import withdrawalAvailability from '../../../01-common/withdrawalAvailability.js';
 import normalizeAssets from '../../../01-common/normalizeAssets.js';
 import { ExchangePair } from '../../models/exchange.js';
 import { TickerData } from '../../models/ticker.js';
@@ -30,6 +31,16 @@ const kucoinAdapter = {
         url.searchParams.set('connectId', crypto.randomUUID());
 
         return { websocketUrl: url.toString(), heartbeatInterval: server.pingInterval, heartbeatTimeout: server.pingTimeout };
+    },
+
+    async getWithdrawalStatuses(request) {
+        const response = await request('https://api.kucoin.com/api/v3/currencies');
+        if (response.code !== '200000') throw new Error(response.msg || 'KuCoin currencies failed');
+        return response.data.flatMap(coin => {
+            const assets = normalizeAssets('kucoin', coin.currency, '');
+            return assets ? [{ asset: assets.baseAsset,
+                withdraw: withdrawalAvailability((coin.chains ?? []).map(chain => chain.isWithdrawEnabled)) }] : [];
+        });
     },
 
     subscriptions(pairs) {

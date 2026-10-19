@@ -71,6 +71,7 @@ const TIMING = {
     discoveryRetryDelay: 10000,
     connectionStagger: 500,
     quoteMaxAge: 30000,
+    withdrawalRefreshInterval: 60000,
     renderInterval: 1000
 };
 

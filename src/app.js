@@ -1,3 +1,4 @@
+import { getRefreshWithdrawalStatusUseCase } from './01-common/containers/usecases/refreshWithdrawalStatusUseCaseIoC.js';
 import { TIMING } from './config.js';
 import ArbitrageController from './02-presentation/controllers/ArbitrageController.js';
 import { renderConsole } from './02-presentation/console.js';
@@ -12,6 +13,7 @@ const arbitrageController = new ArbitrageController({
     stopMarketData: getStopMarketDataUseCase(),
     getOpportunities: getOpportunitiesUseCase(),
     getMarketStatus: getMarketStatusUseCase(),
+    refreshWithdrawalStatus: getRefreshWithdrawalStatusUseCase(),
     renderConsole
 });
 

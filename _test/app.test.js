@@ -21,12 +21,15 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
         assert.ok(result.logs.some(line => line.includes('coinbase: conectado')));
         assert.ok(result.logs.some(line => line.includes('binance: conectado')));
         assert.ok(result.logs.some(line => line.includes('kraken: conectado')));
-        assert.equal(result.requested.every(url => /currency_pairs|symbols|bullet-public|exchangeInfo|instruments-info|AssetPairs|\/products|\/instruments/.test(url)), true);
+        assert.equal(result.requested.every(url => /currencies|coins|currency_pairs|symbols|bullet-public|exchangeInfo|instruments-info|AssetPairs|\/products|\/instruments/.test(url)), true);
         assert.ok(result.logs.some(line => line.includes('okx: conectado')));
         assert.ok(result.logs.some(line => line.includes('bybit: conectado')));
         assert.ok(result.logs.some(line => line.includes('bitget: conectado')));
         assert.ok(result.logs.some(line => line.includes('kucoin: conectado')));
         assert.ok(result.logs.some(line => line.includes('gateio: conectado')));
+        assert.equal(rows.find(row => row.buy === 'gateio').withdraw, true);
+        assert.equal(rows.find(row => row.buy === 'bitget').withdraw, false);
+        assert.equal(rows.find(row => row.buy === 'binance').withdraw, null);
         assert.equal(result.closed, true);
         assert.equal(result.activeIntervals, 0);
     });

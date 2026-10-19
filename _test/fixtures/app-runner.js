@@ -56,6 +56,12 @@ globalThis.fetch = async (input, options) => {
         data = { code: '200000', data: { token: 'test-token', instanceServers: [{ endpoint: 'wss://ws-api-spot.kucoin.com', protocol: 'websocket', encrypt: true, pingInterval: 18000, pingTimeout: 10000 }] } };
     } else if (url.hostname === 'api.gateio.ws' && url.pathname.endsWith('/currency_pairs')) {
         data = [{ id: 'ETH_USDT', base: 'ETH', quote: 'USDT', trade_status: 'tradable', type: 'normal' }];
+    } else if (url.hostname === 'api.kucoin.com' && url.pathname.endsWith('/currencies')) {
+        data = { code: '200000', data: [{ currency: 'ETH', chains: [{ isWithdrawEnabled: true }] }] };
+    } else if (url.hostname === 'api.gateio.ws' && url.pathname.endsWith('/currencies')) {
+        data = [{ currency: 'ETH', chains: [{ withdraw_disabled: false, withdraw_delayed: false }] }];
+    } else if (url.hostname === 'api.bitget.com' && url.pathname.endsWith('/coins')) {
+        data = { code: '00000', data: [{ coin: 'ETH', chains: [{ withdrawable: 'false' }] }] };
     } else {
         throw new Error(`Unexpected request: ${url}`);
     }

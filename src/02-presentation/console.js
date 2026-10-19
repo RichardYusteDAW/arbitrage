@@ -6,7 +6,8 @@ const formatOpportunity = opportunity => ({
     sell: opportunity.sell,
     profitability: opportunity.profitability.toFixed(4) + '%',
     maxVolumeUSD: opportunity.maxVolumeUSD?.toFixed(2) ?? null,
-    profitUSD: opportunity.profitUSD?.toFixed(2) ?? null
+    profitUSD: opportunity.profitUSD?.toFixed(2) ?? null,
+    withdraw: opportunity.withdraw ?? null
 });
 
 const renderConsole = (opportunities, exchangeStatuses) => {
@@ -19,7 +20,7 @@ const renderConsole = (opportunities, exchangeStatuses) => {
         console.log(`${exchangeName}: ${status.state} | conexiones ${status.connections}/${status.totalConnections} | pares con datos ${status.quotes}${status.error ? ` | ${status.error}` : ''}`);
     }
     
-    console.log(`Oportunidades: ${opportunities.length} | rentabilidad bruta, sin comisiones | USDT/USDC = USD`);
+    console.log(`Oportunidades: ${opportunities.length} | rentabilidad bruta, sin comisiones | USDT/USDC = USD | withdraw: retiro en compra (alguna red); null = desconocido`);
     console.table(sortedOpportunities.slice(0, 32).map(formatOpportunity));
 };
 
